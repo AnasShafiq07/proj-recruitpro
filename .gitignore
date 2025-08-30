@@ -1,3 +1,10 @@
+# Node  (Frontend)
+Frontend/node_modules/
+Frontend/dist/
+
+
+# Backend (FastAPI)
+
 # --- Python ---
 __pycache__/
 *.pyc
