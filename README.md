@@ -3,7 +3,7 @@ Smart Hr Automation System
 # Project Setup Guide
 Clone Repository
 ```
-  https://github.com/AnasShafiq07/proj-recruitpro.git
+  git clone https://github.com/AnasShafiq07/proj-recruitpro.git
   cd proj-recruitpro
 ```
 
@@ -24,7 +24,7 @@ Clone Repository
 ```
 4. Run the FastAPI development server:
 ```
-  uvicorn main:app --reload
+   uvicorn app.main:app --reload
 ```
 
 ## Frontend Setup (React)
