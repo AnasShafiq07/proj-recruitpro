@@ -1,4 +1,4 @@
-Smart Hr Automation System
+RecruitPro - A smart hiring platform
 
 # Project Setup Guide
 Clone Repository
@@ -22,7 +22,12 @@ Clone Repository
 ```
   pip install -r requirements.txt
 ```
-4. Run the FastAPI development server:
+4. Add alembic migrations:
+```
+  alembic revision --autogenerate -m "Initial migration"
+  alembic upgrade head
+```
+5. Run the FastAPI development server:
 ```
    uvicorn app.main:app --reload
 ```
