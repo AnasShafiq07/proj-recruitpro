@@ -3,8 +3,8 @@ Smart Hr Automation System
 # Project Setup Guide
 Clone Repository
 ```
-  git clone https://github.com/AnasShafiq07/proj-hr-automation.git
-  cd proj-hr-automation
+  https://github.com/AnasShafiq07/proj-recruitpro.git
+  cd proj-recruitpro
 ```
 
 ## Backend Setup (FastAPI)
