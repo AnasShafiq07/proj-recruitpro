@@ -6,7 +6,7 @@ from pydantic import BaseModel, EmailStr
 class HRManagerBase(BaseModel):
     name: str
     email: EmailStr
-    role: Optional[str] = "HR"
+    role: Optional[str] = "hr"
 
 
 class HRManagerCreate(HRManagerBase):

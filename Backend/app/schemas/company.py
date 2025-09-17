@@ -7,17 +7,14 @@ from pydantic import BaseModel, EmailStr
 
 class CompanyBase(BaseModel):
     name: str
-    email: EmailStr
 
 
 class CompanyCreate(CompanyBase):
-    password: str
-
+    pass
 
 class CompanyUpdate(BaseModel):
-    name: Optional[str] = None
-    email: Optional[EmailStr] = None
-    password: Optional[str] = None
+    name: str
+
 
 
 class CompanyRead(CompanyBase):

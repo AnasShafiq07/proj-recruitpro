@@ -6,6 +6,6 @@ from fastapi import APIRouter, Depends, HTTPException, status, Body
 router = APIRouter(prefix="/analyzer", tags=["Resume Analyzer"])
 
 
-@router.post("/")
+@router.get("/")
 def analyze_resume():
     return {"message": "Resume Analyzed"}
