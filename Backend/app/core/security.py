@@ -18,7 +18,7 @@ def get_current_hr(token: str = Depends(oauth2_hr))-> Company:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token", headers={"WWW-Authenticate":"Bearer"})
     
     payload = decode_token(token)
-    if not payload or "sub" not in payload or payload.get("type") != "hr":
+    if not payload or "sub" not in payload:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token", headers={"WWW-Authenticate": "Bearer"})
     
     hr_email = payload["sub"]
@@ -31,13 +31,16 @@ def get_current_hr(token: str = Depends(oauth2_hr))-> Company:
 def authentication_hr(email: str, password: str) -> Optional[HRManager]:
     hr = hr_by_email(email)
     if not hr or not verify_password(password, hr.password):
+        print("pass not verify")
         return None
     return hr
 
 
 def require_role(role: str):
     def __require_role(hr_data: HRManager = Depends(get_current_hr)):
-        if role == hr_data.role:
+        print(role)
+        print(hr_data.role)
+        if role != hr_data.role:
             raise HTTPException(status_code=403, detail="Forbidden insufficient role")
         return hr_data
     return __require_role

@@ -5,29 +5,30 @@ from app.db.session import get_db
 from sqlalchemy.orm import Session
 from app.db.models import Company, HRManager
 from app.schemas.company import CompanyCreate
-from app.schemas.hr_manager import HRManagerCreate
+from app.schemas.hr_manager import HRManagerCreate, HRManagerUpdate
 from app.authorization.auth import create_access_token, create_refresh_token, ACCESS_TOKEN_EXPIRE_MINUTES
-from app.core.security import authentication_hr, require_role
+from app.core.security import authentication_hr, require_role, get_current_hr
 from app.utilities.password import hash_password
 from app.services.company import create_company
-from app.services.hr_manager import create_hr_manager
+from app.services.hr_manager import create_hr_manager, update_hr_manager
 from app.schemas.auth_token import AuthTokenCreate
 from datetime import datetime, timezone
-from app.services.auth import create_access_token, create_blacklisted_token
+from app.services.auth import add_access_token, create_blacklisted_token
 
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
 
-@router.post("company/signup")
+@router.post("/company/signup")
 def signup_company(comp: CompanyCreate, db: Session = Depends(get_db)):
     comp = create_company(db, comp)
     return comp
 
-@router.post("admin/signup")
+@router.post("/admin/signup")
 def signup_admin(hr: HRManagerCreate, db: Session = Depends(get_db)):
     hr.password = hash_password(hr.password)
+    hr.role = "admin"
     hr = create_hr_manager(db, hr)
     access_token = create_access_token(
     {"sub": hr.email, "type": "hr"},
@@ -41,7 +42,7 @@ def signup_admin(hr: HRManagerCreate, db: Session = Depends(get_db)):
         company_id=hr.company_id
     )
 
-    create_access_token(db, token)
+    add_access_token(db, token)
     return {
         "access_token": access_token,
         "refresh_token": refresh_token,
@@ -64,7 +65,7 @@ def login_hr(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Dep
         hr_id=hr.id,
         company_id=hr.company_id
     )
-    create_access_token(db, token)
+    add_access_token(db, token)
 
     return {
         "access_token": access_token,
@@ -81,6 +82,12 @@ def signup_hr(hr: HRManagerCreate, db: Session = Depends(get_db)):
     return hr
 
 
+@router.put("/hr/update-info")
+def update_hr(updates: HRManagerUpdate, db: Session = Depends(get_db), hr: HRManager = Depends(get_current_hr)):
+    updated = update_hr_manager(db, hr.id, updates)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Hr not found")
+    return updated
 
 @router.post("/hr/logout", status_code=200)
 def logout_hr(refresh_token: str = Body(..., embed=True)):

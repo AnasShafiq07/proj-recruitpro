@@ -9,7 +9,7 @@ def create_hr_manager(db: Session, hr_in: HRManagerCreate) -> HRManager:
     db_hr = HRManager(
         name=hr_in.name,
         email=hr_in.email,
-        password=hash_password(hr_in.password),
+        password=hr_in.password,
         role=hr_in.role,
         company_id=hr_in.company_id,
     )

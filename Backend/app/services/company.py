@@ -8,9 +8,7 @@ from app.utilities.password import hash_password
 
 def create_company(db: Session, company_in: CompanyCreate) -> Company:
     db_company = Company(
-        name=company_in.name,
-        email=company_in.email,
-        password=hash_password(company_in.password),
+        name=company_in.name
     )
     db.add(db_company)
     db.commit()

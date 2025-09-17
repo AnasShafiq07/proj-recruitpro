@@ -5,8 +5,14 @@ from datetime import datetime, timezone
 
 
 
-def create_access_token(db: Session, token: AuthTokenCreate):
-    db_token = AuthToken(**token.model_dump())
+def add_access_token(db: Session, token: AuthTokenCreate):
+    db_token = AuthToken(
+        access_token = token.access_token,
+        refresh_token = token.refresh_token,
+        expires_at = token.expires_at,
+        company_id = token.company_id,
+        hr_id = token.hr_id
+    )
     db.add(db_token)
     db.commit()
     db.refresh(db_token)

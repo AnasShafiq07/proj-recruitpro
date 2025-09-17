@@ -4,7 +4,6 @@ from jose import JWSError, JWTError, jwt
 from passlib.context import CryptContext
 from app.core.config import settings
 from app.services.auth import is_blacklisted_token
-from app.services.company import get_company, get_company_by_email
 from app.services.hr_manager import get_hr_by_email, get_hr_manager
 from app.db.session import SessionLocal
 
@@ -21,22 +20,6 @@ def is_blacklisted(token):
         db.close()
     return blacklisted
 
-
-# def company_by_id(comp_id: int):
-#     db = SessionLocal()
-#     try:
-#         company = get_company(db, comp_id)
-#     finally:
-#         db.close()
-#     return company
-
-# def company_by_email(email: str):
-#     db = SessionLocal()
-#     try:
-#         company = get_company_by_email(db, email)
-#     finally:
-#         db.close()
-#     return company
 
 def hr_by_id(hr_id: int):
     db = SessionLocal()
