@@ -12,22 +12,23 @@ Clone Repository
 ```
   cd Backend
 ```
-2. Create and activate a virtual environment:
+2. Create .env file in Backend folder and map it according to app/core/config.py
+3. Create and activate a virtual environment:
 ```
   python -m venv venv
 
   venv\Scripts\activate
 ```
-3. Install dependencies:
+4. Install dependencies:
 ```
   pip install -r requirements.txt
 ```
-4. Add alembic migrations:
+5. Add alembic migrations:
 ```
   alembic revision --autogenerate -m "Initial migration"
   alembic upgrade head
 ```
-5. Run the FastAPI development server:
+6. Run the FastAPI development server:
 ```
    uvicorn app.main:app --reload
 ```
