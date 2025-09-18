@@ -33,7 +33,7 @@ Clone Repository
 ```
 
 ## Frontend Setup (React)
-1. Go to folder:
+1. Go to project's root folder:
 ```
   cd Frontend/app
 ```
