@@ -20,8 +20,10 @@ def create_hr_manager(db: Session, hr_in: HRManagerCreate) -> HRManager:
 
 
 def get_hr_manager(db: Session, hr_id: int) -> HRManager | None:
-    return db.query(HRManager).filter(HRManager.hr_id == hr_id).first()
+    return db.query(HRManager).filter(HRManager.id == hr_id).first()
 
+def get_hr_managers(db: Session):
+    return db.query(HRManager).all()
 
 def get_hr_by_email(db: Session, email: str) -> HRManager | None:
     return db.query(HRManager).filter(HRManager.email == email).first()

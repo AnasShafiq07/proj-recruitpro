@@ -11,8 +11,6 @@ from app.utilities.password import verify_password
 oauth2_hr = OAuth2PasswordBearer(tokenUrl="/auth/hr/login")
 
 
-
-
 def get_current_hr(token: str = Depends(oauth2_hr))-> Company:
     if is_blacklisted(token):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token", headers={"WWW-Authenticate":"Bearer"})
