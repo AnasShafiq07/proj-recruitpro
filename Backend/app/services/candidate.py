@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from app.db.models import models
+from app.db import models
 from app.schemas.candidate import CandidateCreate, CandidateUpdate
 
 

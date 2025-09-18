@@ -21,7 +21,7 @@ class HRManagerUpdate(BaseModel):
     role: Optional[str] = None
 
 
-class HRManagerRead(HRManagerBase):
+class HRManagerOut(HRManagerBase):
     hr_id: int
     company_id: int
     created_at: datetime

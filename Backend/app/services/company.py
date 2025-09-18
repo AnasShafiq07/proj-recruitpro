@@ -17,6 +17,9 @@ def create_company(db: Session, company_in: CompanyCreate) -> Company:
 def get_company(db: Session, company_id: int) -> Company | None:
     return db.query(Company).filter(Company.company_id == company_id).first()
 
+def get_companies(db: Session): 
+    return db.query(Company).all()
+
 
 def get_company_by_email(db: Session, email: str) -> Company | None:
     return db.query(Company).filter(Company.email == email).first()

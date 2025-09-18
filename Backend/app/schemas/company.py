@@ -17,7 +17,7 @@ class CompanyUpdate(BaseModel):
 
 
 
-class CompanyRead(CompanyBase):
+class CompanyOut(CompanyBase):
     company_id: int
     created_at: datetime
 
