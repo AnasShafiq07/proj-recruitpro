@@ -10,3 +10,7 @@ router = APIRouter(prefix="/analyzer", tags=["Resume Analyzer"], dependencies=[D
 @router.get("/")
 def analyze_resume():
     return {"message": "Resume Analyzed"}
+
+@router.get("/good")
+def good_analysis():
+    return {"message": "Good Resume"}

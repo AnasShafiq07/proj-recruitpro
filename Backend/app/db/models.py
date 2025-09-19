@@ -5,7 +5,7 @@ from sqlalchemy import String, Integer, Text, DateTime, Float, Boolean, ForeignK
 from typing import Optional
 from app.database import Base
 
-
+#good code structure reference:
 class Company(Base):
     __tablename__ = "company"
 
