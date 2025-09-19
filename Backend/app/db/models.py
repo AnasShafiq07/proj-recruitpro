@@ -48,7 +48,28 @@ class Job(Base):
 
     hr_manager: Mapped["HRManager"] = relationship(back_populates="jobs")
     applications: Mapped[list["Application"]] = relationship(back_populates="job")
+    question_form: Mapped["QuestionsForm"] = relationship(back_populates="job")
 
+
+
+class QuestionsForm(Base):
+    __tablename__ = "questions_form"
+
+    form_id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    job_id: Mapped[int] = mapped_column(ForeignKey("job.job_id", ondelete="CASCADE"))
+    
+    job: Mapped["Job"] = relationship(back_populates="question_form")
+    questions: Mapped[list["Question"]] = relationship(back_populates="form", cascade="all, delete-orphan")
+
+
+class Question(Base):
+    __tablename__ = "question"
+
+    question_id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    form_id: Mapped[int] = mapped_column(ForeignKey("questions_form.form_id", ondelete="CASCADE"))
+    question_text: Mapped[str] = mapped_column(Text, nullable=False)
+
+    form: Mapped["QuestionsForm"] = relationship(back_populates="questions")
 
 class Candidate(Base):
     __tablename__ = "candidate"

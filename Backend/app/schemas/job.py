@@ -2,7 +2,7 @@
 from datetime import datetime
 from pydantic import BaseModel
 from typing import Optional
-
+from .questions_form import QuestionsFormCreate, QuestionsFormUpdate
 
 class JobBase(BaseModel):
     title: str
@@ -17,6 +17,8 @@ class JobBase(BaseModel):
 class JobCreate(JobBase):
     hr_id: int
 
+class JobCreateWithFormCreate(JobCreate):
+    questions_form: Optional[QuestionsFormCreate] = None
 
 class JobUpdate(BaseModel):
     title: Optional[str] = None
@@ -26,6 +28,9 @@ class JobUpdate(BaseModel):
     salary_range: Optional[str] = None
     deadline: Optional[datetime] = None
     application_fee: Optional[float] = None
+
+class JobUpdateWithFormUpdate(JobUpdate):
+    questions_form: Optional[QuestionsFormUpdate] = None
 
 
 class JobOut(JobBase):
