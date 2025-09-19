@@ -10,7 +10,7 @@ class Company(Base):
     __tablename__ = "company"
 
     company_id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    name: Mapped[str] = mapped_column(String, nullable=False, unique=True)
+    name: Mapped[str] = mapped_column(String, nullable=False, unique=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc))
 
     hrs: Mapped[list["HRManager"]] = relationship(back_populates="company")
