@@ -35,6 +35,8 @@ class JobUpdateWithFormUpdate(JobUpdate):
 
 class JobOut(JobBase):
     job_id: int
+    slug: str
+    url: str
 
     class Config:
         from_attributes = True

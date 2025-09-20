@@ -4,6 +4,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import String, Integer, Text, DateTime, Float, Boolean, ForeignKey
 from typing import Optional
 from app.database import Base
+import uuid
 
 #good code structure reference:
 class Company(Base):
@@ -45,6 +46,7 @@ class Job(Base):
     salary_range: Mapped[str] = mapped_column(String, nullable=True)
     deadline: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     application_fee: Mapped[float] = mapped_column(Float, nullable=True)
+    slug: Mapped[str] = mapped_column(String, unique=True, default=lambda: str(uuid.uuid4()))
 
     hr_manager: Mapped["HRManager"] = relationship(back_populates="jobs")
     applications: Mapped[list["Application"]] = relationship(back_populates="job")

@@ -50,6 +50,8 @@ def get_job_questions(db: Session, job_id: int):
 def get_jobs(db: Session, skip: int = 0, limit: int = 100):
     return db.query(models.Job).offset(skip).limit(limit).all()
 
+def get_job_by_slug(db: Session, slug: str):
+    return db.query(models.Job).filter(models.Job.slug == slug).first()
 
 def update_job(db: Session, job_id: int, job_data: JobUpdateWithFormUpdate):
     db_job = get_job(db, job_id)
@@ -90,11 +92,30 @@ def update_job(db: Session, job_id: int, job_data: JobUpdateWithFormUpdate):
     db.refresh(db_job)
     return db_job
 
+def get_questions_form_by_job(db: Session, job_id: int):
+    return db.query(models.QuestionsForm).filter(models.QuestionsForm.job_id == job_id).first()
 
 
 def delete_job(db: Session, job_id: int):
     db_job = get_job(db, job_id)
-    if db_job:
-        db.delete(db_job)
-        db.commit()
+    if not db_job:
+        return None
+
+    # delete related questions (list of rows)
+    db_questions = get_job_questions(db, db_job.job_id)
+    if db_questions:
+        for question in db_questions:
+            db.delete(question)
+
+    # delete related form (single row)
+    db_form = get_questions_form_by_job(db, db_job.job_id)
+    if db_form:
+        db.delete(db_form)
+
+    # finally delete job
+    db.delete(db_job)
+    db.commit()
+
     return db_job
+
+

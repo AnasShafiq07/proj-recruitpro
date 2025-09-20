@@ -13,7 +13,7 @@ from app.services.candidate import (
 )
 from app.core.security import get_current_hr
 
-router = APIRouter(prefix="/candidates", tags=["Candidates"], dependencies=[Depends(get_current_hr)])
+router = APIRouter(prefix="/candidates", tags=["Candidates"])
 
 @router.post("/", response_model=CandidateOut, status_code=status.HTTP_201_CREATED)
 def create_candidate_endpoint(candidate: CandidateCreate, db: Session = Depends(get_db)):
