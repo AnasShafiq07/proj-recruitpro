@@ -72,11 +72,14 @@ class Question(Base):
     question_text: Mapped[str] = mapped_column(Text, nullable=False)
 
     form: Mapped["QuestionsForm"] = relationship(back_populates="questions")
+    answers: Mapped[list["Answer"]] = relationship(back_populates="question", cascade="all, delete-orphan")
+
 
 class Candidate(Base):
     __tablename__ = "candidate"
 
     candidate_id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    job_id: Mapped[int] = mapped_column(ForeignKey("job.job_id"))
     name: Mapped[str] = mapped_column(String, nullable=False)
     email: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     phone: Mapped[str] = mapped_column(String, nullable=True)
@@ -84,9 +87,23 @@ class Candidate(Base):
     skills: Mapped[str] = mapped_column(Text, nullable=True)
     experience: Mapped[str] = mapped_column(Text, nullable=True)
     education: Mapped[str] = mapped_column(Text, nullable=True)
+    resume_url: Mapped[str] = mapped_column(String)
 
     applications: Mapped[list["Application"]] = relationship(back_populates="candidate")
     notifications: Mapped[list["Notification"]] = relationship(back_populates="candidate")
+    answers: Mapped[list["Answer"]] = relationship(back_populates="candidate", cascade="all, delete-orphan")
+
+
+class Answer(Base):
+    __tablename__ = "answer"
+
+    answer_id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    question_id: Mapped[int] = mapped_column(ForeignKey("question.question_id", ondelete="CASCADE"))
+    candidate_id: Mapped[int] = mapped_column(ForeignKey("candidate.candidate_id", ondelete="CASCADE"))
+    answer_text: Mapped[str] = mapped_column(Text, nullable=False)
+
+    question: Mapped["Question"] = relationship(back_populates="answers")
+    candidate: Mapped["Candidate"] = relationship(back_populates="answers")
 
 
 class Application(Base):

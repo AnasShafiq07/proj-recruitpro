@@ -1,14 +1,39 @@
 from sqlalchemy.orm import Session
 from app.db import models
-from app.schemas.candidate import CandidateCreate, CandidateUpdate
+from app.schemas.candidate import CandidateCreate, CandidateUpdate, CandidateCreateWithAnswers
 
 
-def create_candidate(db: Session, candidate: CandidateCreate):
-    db_candidate = models.Candidate(**candidate.model_dump())
+def create_candidate(db: Session, candidate_data: CandidateCreateWithAnswers):
+    # create candidate
+    db_candidate = models.Candidate(
+        job_id = candidate_data.job_id,
+        name=candidate_data.name,
+        email=candidate_data.email,
+        phone=candidate_data.phone,
+        location=candidate_data.location,
+        skills=candidate_data.skills,
+        experience=candidate_data.experience,
+        education=candidate_data.education,
+        resume_url=candidate_data.resume_url 
+    )
     db.add(db_candidate)
     db.commit()
     db.refresh(db_candidate)
+
+    if candidate_data.answers:
+        for ans in candidate_data.answers:
+            db_answer = models.Answer(
+                candidate_id=db_candidate.candidate_id,
+                question_id=ans.question_id,
+                answer_text=ans.answer_text
+            )
+            db.add(db_answer)
+
+        db.commit() 
+        db.refresh(db_candidate)
+
     return db_candidate
+
 
 
 def get_candidate(db: Session, candidate_id: int):

@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 from app.db.session import get_db
-from app.schemas.candidate import CandidateCreate, CandidateUpdate, CandidateOut
+from app.schemas.candidate import CandidateCreate, CandidateUpdate, CandidateOut, CandidateCreateWithAnswers
 from app.services.candidate import (
     create_candidate,
     get_candidate,
@@ -15,8 +15,8 @@ from app.core.security import get_current_hr
 
 router = APIRouter(prefix="/candidates", tags=["Candidates"])
 
-@router.post("/", response_model=CandidateOut, status_code=status.HTTP_201_CREATED)
-def create_candidate_endpoint(candidate: CandidateCreate, db: Session = Depends(get_db)):
+@router.post("/", status_code=status.HTTP_201_CREATED)
+def create_candidate_endpoint(candidate: CandidateCreateWithAnswers, db: Session = Depends(get_db)):
     return create_candidate(db, candidate)
 
 @router.get("/{candidate_id}", response_model=CandidateOut)

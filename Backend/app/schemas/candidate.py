@@ -1,8 +1,14 @@
 from pydantic import BaseModel, EmailStr
-from typing import Optional
+from typing import Optional, List
+
+
+class AnswerBase(BaseModel):
+    question_id: int
+    answer_text: str
 
 
 class CandidateBase(BaseModel):
+    job_id: int
     name: str
     email: EmailStr
     phone: Optional[str] = None
@@ -10,11 +16,17 @@ class CandidateBase(BaseModel):
     skills: Optional[str] = None
     experience: Optional[str] = None
     education: Optional[str] = None
+    resume_url: Optional[str] = None
 
 
 class CandidateCreate(CandidateBase):
     pass
 
+class AnswerCreate(AnswerBase):
+    pass
+
+class CandidateCreateWithAnswers(CandidateCreate):
+    answers: Optional[List[AnswerCreate]] = None
 
 class CandidateUpdate(BaseModel):
     name: Optional[str] = None
@@ -24,6 +36,7 @@ class CandidateUpdate(BaseModel):
     skills: Optional[str] = None
     experience: Optional[str] = None
     education: Optional[str] = None
+    resume_url: Optional[str] = None
 
 
 class CandidateOut(CandidateBase):
