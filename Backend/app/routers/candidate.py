@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 from app.db.session import get_db
-from app.schemas.candidate import CandidateCreate, CandidateUpdate, CandidateOut, CandidateCreateWithAnswers
+from app.schemas.candidate import CandidateCreate, CandidateUpdate, CandidateOut, CandidateCreateWithAnswersAndPayment
 from app.services.candidate import (
     create_candidate,
     get_candidate,
@@ -12,12 +12,22 @@ from app.services.candidate import (
     delete_candidate,
 )
 from app.core.security import get_current_hr
+from app.services.payment import create_payment
+
 
 router = APIRouter(prefix="/candidates", tags=["Candidates"])
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
-def create_candidate_endpoint(candidate: CandidateCreateWithAnswers, db: Session = Depends(get_db)):
-    return create_candidate(db, candidate)
+def create_candidate_endpoint(candidate: CandidateCreateWithAnswersAndPayment, db: Session = Depends(get_db)):
+    db_candidate = create_candidate(db, candidate)
+    if candidate.payment is not None and db_candidate is not None:
+        payment = create_payment(db, candidate.payment, db_candidate.candidate_id)
+    else:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Candidate not created")
+    return {
+        "candidate": db_candidate,
+        "payment": payment
+    }
 
 @router.get("/{candidate_id}", response_model=CandidateOut)
 def get_candidate_endpoint(candidate_id: int, db: Session = Depends(get_db)):

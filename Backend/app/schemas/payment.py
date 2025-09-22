@@ -4,7 +4,7 @@ from typing import Optional
 
 
 class PaymentBase(BaseModel):
-    application_id: int
+    job_id: int
     amount: Optional[float] = None
     status: Optional[str] = "Pending"
 

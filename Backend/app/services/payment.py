@@ -3,8 +3,8 @@ from app.db import models
 from app.schemas.payment import PaymentCreate, PaymentUpdate
 
 
-def create_payment(db: Session, payment: PaymentCreate):
-    db_payment = models.Payment(**payment.model_dump())
+def create_payment(db: Session, payment: PaymentCreate, candidate_id: int):
+    db_payment = models.Payment(**payment.model_dump(), candidate_id=candidate_id)
     db.add(db_payment)
     db.commit()
     db.refresh(db_payment)

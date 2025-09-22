@@ -24,7 +24,7 @@ def create_job_endpoint(job: JobCreateWithFormCreate, db: Session = Depends(get_
     new_job = create_job(db, job)
     # Build absolute URL
     base_url = str(request.base_url).rstrip("/")
-    url = f"{base_url}/jobs/{new_job.slug}"
+    url = f"{base_url}/jobs/url/{new_job.slug}"
     return {
         "job": new_job,
         "job_link": url

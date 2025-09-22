@@ -81,7 +81,7 @@ class Candidate(Base):
     candidate_id: Mapped[int] = mapped_column(primary_key=True, index=True)
     job_id: Mapped[int] = mapped_column(ForeignKey("job.job_id"))
     name: Mapped[str] = mapped_column(String, nullable=False)
-    email: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    email: Mapped[str] = mapped_column(String, unique=False, nullable=False)
     phone: Mapped[str] = mapped_column(String, nullable=True)
     location: Mapped[str] = mapped_column(String, nullable=True)
     skills: Mapped[str] = mapped_column(Text, nullable=True)
@@ -122,7 +122,6 @@ class Application(Base):
     resume_parsing: Mapped["ResumeParsing"] = relationship(back_populates="application", uselist=False)
     interviews: Mapped[list["Interview"]] = relationship(back_populates="application")
     offer_letters: Mapped[list["OfferLetter"]] = relationship(back_populates="application")
-    payment: Mapped["Payment"] = relationship(back_populates="application", uselist=False)
     feedbacks: Mapped[list["Feedback"]] = relationship(back_populates="application")
 
 
@@ -168,12 +167,12 @@ class Payment(Base):
     __tablename__ = "payment"
 
     payment_id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    application_id: Mapped[int] = mapped_column(ForeignKey("application.application_id"))
+    candidate_id: Mapped[int] = mapped_column(ForeignKey("candidate.candidate_id"))
+    job_id: Mapped[int] = mapped_column(ForeignKey("job.job_id"))
     amount: Mapped[float] = mapped_column(Float, nullable=True)
     status: Mapped[str] = mapped_column(String, default="Pending")
     payment_date: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc))
 
-    application: Mapped["Application"] = relationship(back_populates="payment")
 
 
 class Feedback(Base):

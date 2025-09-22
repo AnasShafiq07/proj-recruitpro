@@ -1,9 +1,9 @@
 from sqlalchemy.orm import Session
 from app.db import models
-from app.schemas.candidate import CandidateCreate, CandidateUpdate, CandidateCreateWithAnswers
+from app.schemas.candidate import CandidateCreate, CandidateUpdate, CandidateCreateWithAnswersAndPayment
 
 
-def create_candidate(db: Session, candidate_data: CandidateCreateWithAnswers):
+def create_candidate(db: Session, candidate_data: CandidateCreateWithAnswersAndPayment):
     # create candidate
     db_candidate = models.Candidate(
         job_id = candidate_data.job_id,

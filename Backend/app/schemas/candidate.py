@@ -1,6 +1,6 @@
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List
-
+from .payment import PaymentCreate
 
 class AnswerBase(BaseModel):
     question_id: int
@@ -25,8 +25,10 @@ class CandidateCreate(CandidateBase):
 class AnswerCreate(AnswerBase):
     pass
 
-class CandidateCreateWithAnswers(CandidateCreate):
+class CandidateCreateWithAnswersAndPayment(CandidateCreate):
     answers: Optional[List[AnswerCreate]] = None
+    payment: Optional[PaymentCreate] = None
+
 
 class CandidateUpdate(BaseModel):
     name: Optional[str] = None
