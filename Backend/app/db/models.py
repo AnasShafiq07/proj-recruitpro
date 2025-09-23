@@ -89,7 +89,7 @@ class Candidate(Base):
     education: Mapped[str] = mapped_column(Text, nullable=True)
     resume_url: Mapped[str] = mapped_column(String)
 
-    applications: Mapped[list["Application"]] = relationship(back_populates="candidate")
+    
     notifications: Mapped[list["Notification"]] = relationship(back_populates="candidate")
     answers: Mapped[list["Answer"]] = relationship(back_populates="candidate", cascade="all, delete-orphan")
 
