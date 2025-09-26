@@ -32,6 +32,25 @@ class HRManager(Base):
     jobs: Mapped[list["Job"]] = relationship(back_populates="hr_manager")
     notifications: Mapped[list["Notification"]] = relationship(back_populates="hr_manager")
     tokens: Mapped[list["AuthToken"]] = relationship(back_populates="hr_manager")
+    linkedin_tokens: Mapped[list["LinkedInToken"]] = relationship(back_populates="hr_manager")
+
+
+class LinkedInToken(Base):
+    __tablename__ = "linkedin_token"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    hr_id: Mapped[int] = mapped_column(ForeignKey("hr_manager.id"), nullable=False)
+
+    user_id: Mapped[str] = mapped_column(String, index=True)   
+    urn: Mapped[str] = mapped_column(String, nullable=False)   # urn:li:person:xxx or urn:li:organization:xxx
+    access_token: Mapped[str] = mapped_column(String, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    refresh_token: Mapped[str] = mapped_column(String, nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc))
+
+    # Relationships
+    hr_manager: Mapped["HRManager"] = relationship(back_populates="linkedin_tokens")
 
 
 class Job(Base):
@@ -49,7 +68,6 @@ class Job(Base):
     slug: Mapped[str] = mapped_column(String, unique=True, default=lambda: str(uuid.uuid4()))
 
     hr_manager: Mapped["HRManager"] = relationship(back_populates="jobs")
-    applications: Mapped[list["Application"]] = relationship(back_populates="job")
     question_form: Mapped["QuestionsForm"] = relationship(back_populates="job")
 
 
@@ -106,61 +124,34 @@ class Answer(Base):
     candidate: Mapped["Candidate"] = relationship(back_populates="answers")
 
 
-class Application(Base):
-    __tablename__ = "application"
-
-    application_id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    job_id: Mapped[int] = mapped_column(ForeignKey("job.job_id"))
-    candidate_id: Mapped[int] = mapped_column(ForeignKey("candidate.candidate_id"))
-    resume_file: Mapped[str] = mapped_column(String, nullable=True)
-    status: Mapped[str] = mapped_column(String, default="Applied")
-    submission_date: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc))
-    fee_status: Mapped[str] = mapped_column(String, nullable=True)
-
-    job: Mapped["Job"] = relationship(back_populates="applications")
-    candidate: Mapped["Candidate"] = relationship(back_populates="applications")
-    resume_parsing: Mapped["ResumeParsing"] = relationship(back_populates="application", uselist=False)
-    interviews: Mapped[list["Interview"]] = relationship(back_populates="application")
-    offer_letters: Mapped[list["OfferLetter"]] = relationship(back_populates="application")
-    feedbacks: Mapped[list["Feedback"]] = relationship(back_populates="application")
-
-
 class ResumeParsing(Base):
     __tablename__ = "resume_parsing"
 
     parsing_id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    application_id: Mapped[int] = mapped_column(ForeignKey("application.application_id"))
     skills_extracted: Mapped[str] = mapped_column(Text, nullable=True)
     experience_extracted: Mapped[str] = mapped_column(Text, nullable=True)
     education_extracted: Mapped[str] = mapped_column(Text, nullable=True)
     ai_score: Mapped[float] = mapped_column(Float, nullable=True)
-
-    application: Mapped["Application"] = relationship(back_populates="resume_parsing")
 
 
 class Interview(Base):
     __tablename__ = "interview"
 
     interview_id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    application_id: Mapped[int] = mapped_column(ForeignKey("application.application_id"))
     scheduled_time: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     meet_link: Mapped[str] = mapped_column(String, nullable=True)
     status: Mapped[str] = mapped_column(String, nullable=True)
-
-    application: Mapped["Application"] = relationship(back_populates="interviews")
 
 
 class OfferLetter(Base):
     __tablename__ = "offer_letter"
 
     offer_id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    application_id: Mapped[int] = mapped_column(ForeignKey("application.application_id"))
     version_no: Mapped[int] = mapped_column(Integer, default=1)
     details: Mapped[str] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc))
 
-    application: Mapped["Application"] = relationship(back_populates="offer_letters")
 
 
 class Payment(Base):
@@ -179,12 +170,10 @@ class Feedback(Base):
     __tablename__ = "feedback"
 
     feedback_id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    application_id: Mapped[int] = mapped_column(ForeignKey("application.application_id"))
     comments: Mapped[str] = mapped_column(Text, nullable=True)
     rating: Mapped[int] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc))
 
-    application: Mapped["Application"] = relationship(back_populates="feedbacks")
 
 
 class Notification(Base):
