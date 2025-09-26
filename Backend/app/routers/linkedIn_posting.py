@@ -20,7 +20,6 @@ router = APIRouter(prefix="/linkedin", tags=["Post Jobs to LinkedIn"])
 
 @router.get("/auth/login/{hr_id}")
 def login_linkedin(hr_id: int, db: Session = Depends(get_db)):
-    """Redirect HRManager to LinkedIn login page"""
     hr = db.query(HRManager).filter_by(id=hr_id).first()
     if not hr:
         raise HTTPException(status_code=404, detail="HR Manager not found")
@@ -29,20 +28,17 @@ def login_linkedin(hr_id: int, db: Session = Depends(get_db)):
         "https://www.linkedin.com/oauth/v2/authorization"
         f"?response_type=code&client_id={CLIENT_ID}"
         f"&redirect_uri={REDIRECT_URI}"
-        "&scope=openid%20profile%20email"   # OpenID Connect scopes
+        # Request full scopes needed for posting
+        "&scope=openid%20profile%20email%20w_member_social%20w_organization_social%20rw_organization_admin"
         f"&state={hr_id}"
     )
     return RedirectResponse(linkedin_auth_url)
 
 
 @router.get("/auth/callback")
-def auth_callback(
-    request: Request,
-    code: str = None,
-    error: str = None,
-    state: int = None,
-    db: Session = Depends(get_db)
-):
+def auth_callback(request: Request, code: str = None, error: str = None, state: int = None,
+    db: Session = Depends(get_db)):
+    
     if error:
         raise HTTPException(status_code=400, detail=f"OAuth error: {error}")
     if not code:
@@ -50,12 +46,11 @@ def auth_callback(
 
     hr_id = state
 
-    # Exchange code for access token
     token_url = "https://www.linkedin.com/oauth/v2/accessToken"
     data = {
         "grant_type": "authorization_code",
         "code": code,
-        "redirect_uri": REDIRECT_URI,   # must exactly match the login step
+        "redirect_uri": REDIRECT_URI,   
         "client_id": CLIENT_ID,
         "client_secret": CLIENT_SECRET,
     }
@@ -72,7 +67,6 @@ def auth_callback(
     access_token = token_data["access_token"]
     expires_in = token_data.get("expires_in")
 
-    # Fetch user info via OpenID Connect endpoint
     userinfo_resp = requests.get(
         "https://api.linkedin.com/v2/userinfo",
         headers={"Authorization": f"Bearer {access_token}"}
@@ -81,19 +75,11 @@ def auth_callback(
         raise HTTPException(status_code=userinfo_resp.status_code, detail=userinfo_resp.json())
 
     userinfo = userinfo_resp.json()
-    user_id = userinfo["sub"]       # OpenID subject identifier
+    user_id = userinfo["sub"]    
     email = userinfo.get("email")
     name = userinfo.get("name")
 
-    # Save to DB (adjust fields to your schema)
-    token = create_or_update_linkedin_token(
-        db=db,
-        hr_id=hr_id,
-        user_id=user_id,
-        urn=f"urn:li:person:{user_id}",
-        access_token=access_token,
-        expires_in=expires_in
-    )
+    token = create_or_update_linkedin_token(db=db, hr_id=hr_id, user_id=user_id,urn=f"urn:li:person:{user_id}", access_token=access_token, expires_in=expires_in)
 
     return {
         "message": "Login successful",
@@ -117,7 +103,6 @@ def auth_status(hr_id: int, db: Session = Depends(get_db)):
     }
 
 
-# ------------------- POST CONTENT -------------------
 @router.post("/post/{hr_id}")
 async def post_to_linkedin(
     hr_id: int,
@@ -125,7 +110,6 @@ async def post_to_linkedin(
     image: UploadFile = None,
     db: Session = Depends(get_db)
 ):
-    """Post a job/image to LinkedIn on behalf of an HR Manager"""
     token = get_linkedin_token(db, hr_id)
     if not token:
         raise HTTPException(status_code=401, detail="HR Manager not authenticated with LinkedIn")
@@ -136,7 +120,6 @@ async def post_to_linkedin(
         "X-Restli-Protocol-Version": "2.0.0"
     }
 
-    # 1. Register upload
     register_url = "https://api.linkedin.com/v2/assets?action=registerUpload"
     register_body = {
         "registerUploadRequest": {
@@ -159,7 +142,6 @@ async def post_to_linkedin(
     upload_url = reg_data["value"]["uploadMechanism"]["com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest"]["uploadUrl"]
     asset = reg_data["value"]["asset"]
 
-    # 2. Upload the binary image
     with open(image.filename, "wb") as buffer:
         shutil.copyfileobj(image.file, buffer)
 
@@ -171,7 +153,6 @@ async def post_to_linkedin(
     if upload_resp.status_code not in [200, 201]:
         raise HTTPException(status_code=upload_resp.status_code, detail="Image upload failed")
 
-    # 3. Create the LinkedIn post
     post_url = "https://api.linkedin.com/v2/ugcPosts"
     post_body = {
         "author": token.urn,
