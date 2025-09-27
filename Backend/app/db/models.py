@@ -6,7 +6,6 @@ from typing import Optional
 from app.database import Base
 import uuid
 
-#good code structure reference:
 class Company(Base):
     __tablename__ = "company"
 

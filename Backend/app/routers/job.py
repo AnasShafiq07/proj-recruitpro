@@ -49,7 +49,7 @@ def get_job_by_slug_endpoint(slug: str, db: Session = Depends(get_db)):
     }
 
 
-@router.get("/", response_model=List[JobOut], dependencies=[Depends(get_current_hr)])
+@router.get("/", dependencies=[Depends(get_current_hr)])
 def get_all_jobs(db: Session = Depends(get_db)):
     return get_jobs(db)
 
