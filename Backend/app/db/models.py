@@ -93,6 +93,7 @@ class Candidate(Base):
     notifications: Mapped[list["Notification"]] = relationship(back_populates="candidate")
     answers: Mapped[list["Answer"]] = relationship(back_populates="candidate", cascade="all, delete-orphan")
 
+    applications: Mapped[list["Application"]] = relationship(back_populates="candidate")
 
 class Answer(Base):
     __tablename__ = "answer"
@@ -170,8 +171,10 @@ class Payment(Base):
     candidate_id: Mapped[int] = mapped_column(ForeignKey("candidate.candidate_id"))
     job_id: Mapped[int] = mapped_column(ForeignKey("job.job_id"))
     amount: Mapped[float] = mapped_column(Float, nullable=True)
+    stripe_payment_intent_id: Mapped[Optional[str]] = mapped_column(String, unique=True, nullable=True)  # ✅ added
     status: Mapped[str] = mapped_column(String, default="Pending")
     payment_date: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc))
+
 
 
 
