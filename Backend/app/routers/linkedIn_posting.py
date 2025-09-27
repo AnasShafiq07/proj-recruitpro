@@ -10,7 +10,6 @@ from app.db.models import HRManager
 from app.services.linkedin_posting import create_or_update_linkedin_token, get_linkedin_token
 from app.core.security import get_current_hr
 
-# LinkedIn App credentials
 CLIENT_ID = "86s3nqmu4gikyr"
 CLIENT_SECRET = "WPL_AP1.dQgSXhTzkUG37rIc.Pbp7yA=="
 REDIRECT_URI = "http://localhost:8000/linkedin/auth/callback" 
@@ -28,7 +27,6 @@ def login_linkedin(hr_id: int, db: Session = Depends(get_db)):
         "https://www.linkedin.com/oauth/v2/authorization"
         f"?response_type=code&client_id={CLIENT_ID}"
         f"&redirect_uri={REDIRECT_URI}"
-        # Request full scopes needed for posting
         "&scope=openid%20profile%20email%20w_member_social%20w_organization_social%20rw_organization_admin"
         f"&state={hr_id}"
     )
@@ -104,12 +102,9 @@ def auth_status(hr_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/post/{hr_id}")
-async def post_to_linkedin(
-    hr_id: int,
-    caption: str = Form(...),
-    image: UploadFile = None,
-    db: Session = Depends(get_db)
-):
+async def post_to_linkedin(hr_id: int, caption: str = Form(...), image: UploadFile = None,
+    db: Session = Depends(get_db)):
+    
     token = get_linkedin_token(db, hr_id)
     if not token:
         raise HTTPException(status_code=401, detail="HR Manager not authenticated with LinkedIn")

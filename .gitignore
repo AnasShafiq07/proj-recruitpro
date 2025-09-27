@@ -18,7 +18,7 @@ Backend/venv/
 *.log
 
 # --- Environment variables ---
-.env
+#.env
 
 # --- Editor/IDE files ---
 .vscode/
