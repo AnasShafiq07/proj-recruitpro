@@ -111,7 +111,7 @@ class Candidate(Base):
     notifications: Mapped[list["Notification"]] = relationship(back_populates="candidate")
     answers: Mapped[list["Answer"]] = relationship(back_populates="candidate", cascade="all, delete-orphan")
 
-    applications: Mapped[list["Application"]] = relationship(back_populates="candidate")
+    #applications: Mapped[list["Application"]] = relationship(back_populates="candidate")
 
 class Answer(Base):
     __tablename__ = "answer"

@@ -15,6 +15,8 @@ import stripe
 import os
 from app.core.security import get_current_hr
 from app.db import models
+from dotenv import load_dotenv
+load_dotenv()
 
 # Stripe config
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
