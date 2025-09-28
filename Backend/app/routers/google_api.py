@@ -1,12 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import uuid, requests, os
 
 from app.db.session import get_db
 from app.db.models import HRManager
 from app.services.google_calendar import create_or_update_google_token, get_google_token
+from app.schemas.google import EventCreate
 
 router = APIRouter(prefix="/google", tags=["Google Calendar & Meet"])
 
@@ -16,9 +17,7 @@ REDIRECT_URI = "http://localhost:8000/google/auth/callback"
 
 SCOPES = "openid email profile https://www.googleapis.com/auth/calendar"
 
-# -----------------------
-# Step 1: Google Login
-# -----------------------
+
 @router.get("/auth/login/{hr_id}")
 def login_google(hr_id: int, db: Session = Depends(get_db)):
     hr = db.query(HRManager).filter_by(id=hr_id).first()
@@ -35,9 +34,7 @@ def login_google(hr_id: int, db: Session = Depends(get_db)):
     )
     return RedirectResponse(google_auth_url)
 
-# -----------------------
-# Step 2: OAuth Callback
-# -----------------------
+
 @router.get("/auth/callback")
 def auth_callback(request: Request, code: str = None, error: str = None, state: int = None, db: Session = Depends(get_db)):
     if error:
@@ -47,7 +44,6 @@ def auth_callback(request: Request, code: str = None, error: str = None, state: 
 
     hr_id = state
 
-    # Exchange code for tokens
     token_url = "https://oauth2.googleapis.com/token"
     data = {
         "code": code,
@@ -79,7 +75,6 @@ def auth_callback(request: Request, code: str = None, error: str = None, state: 
     email = userinfo.get("email")
     name = userinfo.get("name")
 
-    # Save tokens in DB (service function you’ll implement)
     token = create_or_update_google_token(
         db=db,
         hr_id=hr_id,
@@ -97,9 +92,6 @@ def auth_callback(request: Request, code: str = None, error: str = None, state: 
         "expires_at": token.expires_at
     }
 
-# -----------------------
-# Step 3: Auth Status
-# -----------------------
 @router.get("/auth/status/{hr_id}")
 def auth_status(hr_id: int, db: Session = Depends(get_db)):
     token = get_google_token(db, hr_id)
@@ -111,29 +103,29 @@ def auth_status(hr_id: int, db: Session = Depends(get_db)):
         "hr_id": hr_id
     }
 
-# -----------------------
-# Step 4: Create Calendar Event with Meet
-# -----------------------
-@router.post("/create_event/{hr_id}")
-def create_event(hr_id: int, db: Session = Depends(get_db)):
-    token = get_google_token(db, hr_id)
+# Create Calendar Event with Meet
+@router.post("/create_event")
+def create_event(event_data: EventCreate, db: Session = Depends(get_db)):
+    token = get_google_token(db, event_data.hr_id)
     if not token:
         raise HTTPException(status_code=401, detail="Not authenticated with Google")
 
-    # Refresh token if needed (not implemented here)
     access_token = token.access_token
 
-    start_time = (datetime.utcnow() + timedelta(days=1)).isoformat() + "Z"
-    end_time = (datetime.utcnow() + timedelta(days=1, hours=1)).isoformat() + "Z"
+    start_time = event_data.start_time or (datetime.now(timezone.utc) + timedelta(days=1))
+    end_time = event_data.end_time or (start_time + timedelta(hours=1))
 
     event = {
-        "summary": "Project Meeting",
-        "description": "Discuss updates",
-        "start": {"dateTime": start_time, "timeZone": "UTC"},
-        "end": {"dateTime": end_time, "timeZone": "UTC"},
-        "attendees": [{"email": "recipient@example.com"}],
+        "summary": event_data.summary or "Job Meeting",
+        "description": event_data.description or "Discuss updates",
+        "start": {"dateTime": start_time.isoformat(), "timeZone": "UTC"},
+        "end": {"dateTime": end_time.isoformat(), "timeZone": "UTC"},
+        "attendees": [{"email": event_data.email}],
         "conferenceData": {
-            "createRequest": {"requestId": str(uuid.uuid4())}
+            "createRequest": {
+                "requestId": str(uuid.uuid4()),
+                "conferenceSolutionKey": {"type": "hangoutsMeet"}
+            }
         }
     }
 

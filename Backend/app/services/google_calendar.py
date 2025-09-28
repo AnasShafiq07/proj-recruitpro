@@ -3,9 +3,8 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timedelta, timezone
 from app.db.models import GoogleToken
 
-def create_or_update_google_token(db: Session, hr_id: int, user_id: str,
-                                  access_token: str, refresh_token: str,
-                                  expires_in: int, email: str = None):
+def create_or_update_google_token(db: Session, hr_id: int, user_id: str, access_token: str, refresh_token: str, expires_in: int, email: str = None):
+    
     expires_at = datetime.now(timezone.utc) + timedelta(seconds=expires_in)
 
     token = db.query(GoogleToken).filter_by(hr_id=hr_id).first()
