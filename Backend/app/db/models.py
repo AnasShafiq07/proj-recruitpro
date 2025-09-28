@@ -32,6 +32,7 @@ class HRManager(Base):
     notifications: Mapped[list["Notification"]] = relationship(back_populates="hr_manager")
     tokens: Mapped[list["AuthToken"]] = relationship(back_populates="hr_manager")
     linkedin_tokens: Mapped[list["LinkedInToken"]] = relationship(back_populates="hr_manager")
+    google_tokens: Mapped[list["GoogleToken"]] = relationship(back_populates="hr_manager")
 
 
 class LinkedInToken(Base):
@@ -45,11 +46,24 @@ class LinkedInToken(Base):
     access_token: Mapped[str] = mapped_column(String, nullable=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     refresh_token: Mapped[str] = mapped_column(String, nullable=True)
-
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc))
 
-    # Relationships
     hr_manager: Mapped["HRManager"] = relationship(back_populates="linkedin_tokens")
+
+
+class GoogleToken(Base):
+    __tablename__ = "google_token"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    hr_id: Mapped[int] = mapped_column(ForeignKey("hr_manager.id"), nullable=False)
+    user_id: Mapped[str] = mapped_column(String, index=True)   # Google "sub"
+    email: Mapped[str] = mapped_column(String, nullable=True)
+    access_token: Mapped[str] = mapped_column(String, nullable=False)
+    refresh_token: Mapped[str] = mapped_column(String, nullable=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc))
+
+    hr_manager: Mapped["HRManager"] = relationship(back_populates="google_tokens")
 
 
 class Job(Base):

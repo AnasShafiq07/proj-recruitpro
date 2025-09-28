@@ -21,7 +21,7 @@ async def get_ai_client():
         raise HTTPException(status_code=500, detail="AI service not configured.")
     return ai_client
 
-router = APIRouter(prefix="/generate", tags=["Generations"], dependencies=    [Depends(get_current_hr)])
+router = APIRouter(prefix="/generate", tags=["Generations"], dependencies=[Depends(get_current_hr)])
 
 @router.post("/linkedIn_post", response_model=GenerationResponse)
 async def generate_linkedIn_post(

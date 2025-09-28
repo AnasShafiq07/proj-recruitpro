@@ -89,7 +89,6 @@ def auth_callback(request: Request, code: str = None, error: str = None, state: 
 
 @router.get("/auth/status/{hr_id}")
 def auth_status(hr_id: int, db: Session = Depends(get_db)):
-    """Check LinkedIn token status for a specific HR Manager"""
     token = get_linkedin_token(db, hr_id)
     if not token:
         return {"authenticated": False}
