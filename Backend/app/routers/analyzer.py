@@ -14,3 +14,7 @@ def analyze_resume():
 @router.get("/good")
 def good_analysis():
     return {"message": "Good Resume"}
+
+@router.get("/upload")
+def upload_resume():
+    return {"message": "Good Resume"}
