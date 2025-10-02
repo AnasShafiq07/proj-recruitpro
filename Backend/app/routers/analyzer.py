@@ -1,20 +1,27 @@
-from datetime import timedelta
-from fastapi import APIRouter, Depends, HTTPException, status, Body
+# app/routers/analyzer.py
+from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
+from sqlalchemy.orm import Session
+from typing import List, Optional
+from app.db.session import get_db
+from app.analyzer.matcher import upload_and_store_resume, match_job_with_resumes
 from app.core.security import get_current_hr
-
-
 
 router = APIRouter(prefix="/analyzer", tags=["Resume Analyzer"], dependencies=[Depends(get_current_hr)])
 
+@router.post("/upload")
+async def upload_resume_endpoint(
+    candidate_id: int = Form(...),
+    job_id: int = Form(...),
+    resume: UploadFile = File(...),
+    db: Session = Depends(get_db),
+):
+    # resume.file is a SpooledTemporaryFile; upload_and_store_resume expects file-like object with .file.read()
+    result = upload_and_store_resume(db, candidate_id, job_id, resume)
+    return {"message": "uploaded", "data": result}
 
-@router.get("/")
-def analyze_resume():
-    return {"message": "Resume Analyzed"}
-
-@router.get("/good")
-def good_analysis():
-    return {"message": "Good Resume"}
-
-@router.get("/upload")
-def upload_resume():
-    return {"message": "Good Resume"}
+@router.post("/match/{job_id}")
+def match_job_endpoint(job_id: int, top_k: Optional[int] = 20, db: Session = Depends(get_db)):
+    res = match_job_with_resumes(db, job_id, top_k=top_k)
+    if "error" in res:
+        raise HTTPException(status_code=404, detail=res["error"])
+    return res

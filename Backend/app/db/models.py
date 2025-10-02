@@ -80,8 +80,15 @@ class Job(Base):
     application_fee: Mapped[float] = mapped_column(Float, nullable=True)
     slug: Mapped[str] = mapped_column(String, unique=True, default=lambda: str(uuid.uuid4()))
 
+    # NEW: weights for resume analysis
+    skill_weight: Mapped[float] = mapped_column(Float, default=0.35)
+    experience_weight: Mapped[float] = mapped_column(Float, default=0.25)
+    education_weight: Mapped[float] = mapped_column(Float, default=0.15)
+    full_resume_weight: Mapped[float] = mapped_column(Float, default=0.25)
+
     hr_manager: Mapped["HRManager"] = relationship(back_populates="jobs")
     question_form: Mapped["QuestionsForm"] = relationship(back_populates="job")
+
 
 
 
@@ -142,10 +149,30 @@ class ResumeParsing(Base):
     __tablename__ = "resume_parsing"
 
     parsing_id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    candidate_id: Mapped[int] = mapped_column(ForeignKey("candidate.candidate_id", ondelete="CASCADE"))
+    job_id: Mapped[int] = mapped_column(ForeignKey("job.job_id", ondelete="CASCADE"))
+
+    parsed_text: Mapped[str] = mapped_column(Text, nullable=True)  # full extracted resume text
     skills_extracted: Mapped[str] = mapped_column(Text, nullable=True)
     experience_extracted: Mapped[str] = mapped_column(Text, nullable=True)
     education_extracted: Mapped[str] = mapped_column(Text, nullable=True)
-    ai_score: Mapped[float] = mapped_column(Float, nullable=True)
+
+    ai_score: Mapped[float] = mapped_column(Float, nullable=True)  # final AI matching score
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc))
+
+
+class ResumeJobMatch(Base):
+    __tablename__ = "resume_job_match"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    candidate_id: Mapped[int] = mapped_column(ForeignKey("candidate.candidate_id", ondelete="CASCADE"))
+    job_id: Mapped[int] = mapped_column(ForeignKey("job.job_id", ondelete="CASCADE"))
+
+    similarity_score: Mapped[float] = mapped_column(Float, nullable=False)
+    rank_position: Mapped[int] = mapped_column(Integer, nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc))
+
 
 
 class Interview(Base):
