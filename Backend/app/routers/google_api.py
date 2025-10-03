@@ -1,21 +1,24 @@
+import base64
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta, timezone
 import uuid, requests, os
-
+from email.mime.text import MIMEText
 from app.db.session import get_db
 from app.db.models import HRManager
 from app.services.google_calendar import create_or_update_google_token, get_google_token
-from app.schemas.google import EventCreate
+from app.schemas.google import EventCreate, EmailPayload
 
-router = APIRouter(prefix="/google", tags=["Google Calendar & Meet"])
+
+
+router = APIRouter(prefix="/google", tags=["Google Calendar, Meet & Gmail"])
 
 CLIENT_ID = "399949611293-quv3hng1fe6mhnj3qin5e6rukk62vilr.apps.googleusercontent.com"
 CLIENT_SECRET = "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"
 REDIRECT_URI = "http://localhost:8000/google/auth/callback"
 
-SCOPES = "openid email profile https://www.googleapis.com/auth/calendar"
+SCOPES = "openid email profile https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/gmail.send"
 
 
 @router.get("/auth/login/{hr_id}")
@@ -144,4 +147,33 @@ def create_event(event_data: EventCreate, db: Session = Depends(get_db)):
         "eventId": created_event["id"],
         "meetLink": created_event.get("hangoutLink"),
         "htmlLink": created_event.get("htmlLink")
+    }
+
+
+@router.post("send_email")
+def send_email(payload: EmailPayload, db: Session = Depends(get_db)):
+    
+    token = get_google_token(db, payload.hr_id)
+    if not token:
+        raise HTTPException(status_code=401, detail="Hp not authenticated with Google")
+    access_token = token.access_token
+    message = MIMEText(payload.content)
+    message["to"] = payload.recipient
+    message["subject"] = payload.subject
+    raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode("utf-8")
+
+    url = "https://gmail.googleapis.com/gmail/v1/users/me/messages/send"
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json"
+    }  
+    body = {"raw": raw_message}
+    response = requests.post(url, headers=headers, json=body)
+
+    if response.status_code not in [200, 202]:
+        raise HTTPException(status_code=response.status_code, detail=response.json())
+
+    return {
+        "message": "Email sent successfully",
+        "gmail_response": response.json()
     }
