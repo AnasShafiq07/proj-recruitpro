@@ -37,9 +37,8 @@ def get_google_token(db: Session, hr_id: int):
 
 
 def delete_google_token(db: Session, hr_id: int):
-    token = db.query(GoogleToken).filter_by(hr_id=hr_id).first()
-    if token:
-        db.delete(token)
-        db.commit()
-        return True
-    return False
+    deleted_count = db.query(GoogleToken).filter_by(hr_id=hr_id).delete(synchronize_session=False)
+    db.commit()
+    return deleted_count > 0
+
+
