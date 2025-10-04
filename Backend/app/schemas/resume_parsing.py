@@ -3,7 +3,7 @@ from typing import Optional
 
 
 class ResumeParsingBase(BaseModel):
-    application_id: int
+    candidate_id: int   
     skills_extracted: Optional[str] = None
     experience_extracted: Optional[str] = None
     education_extracted: Optional[str] = None

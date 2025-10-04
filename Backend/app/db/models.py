@@ -123,6 +123,7 @@ class Candidate(Base):
     
     notifications: Mapped[list["Notification"]] = relationship(back_populates="candidate")
     answers: Mapped[list["Answer"]] = relationship(back_populates="candidate", cascade="all, delete-orphan")
+    resume_parsing: Mapped["ResumeParsing"] = relationship(back_populates="candidate", uselist=False)
 
     #applications: Mapped[list["Application"]] = relationship(back_populates="candidate")
 
@@ -142,10 +143,16 @@ class ResumeParsing(Base):
     __tablename__ = "resume_parsing"
 
     parsing_id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    candidate_id: Mapped[int] = mapped_column(ForeignKey("candidate.candidate_id"), nullable=False)
+
     skills_extracted: Mapped[str] = mapped_column(Text, nullable=True)
     experience_extracted: Mapped[str] = mapped_column(Text, nullable=True)
     education_extracted: Mapped[str] = mapped_column(Text, nullable=True)
     ai_score: Mapped[float] = mapped_column(Float, nullable=True)
+
+    # relationship to candidate
+    candidate: Mapped["Candidate"] = relationship(back_populates="resume_parsing")
+
 
 
 class Interview(Base):
