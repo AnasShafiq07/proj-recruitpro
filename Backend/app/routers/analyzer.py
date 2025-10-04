@@ -1,4 +1,3 @@
-# app/routers/analyzer.py
 from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
 from sqlalchemy.orm import Session
 from typing import List, Optional
@@ -15,9 +14,9 @@ async def upload_resume_endpoint(
     resume: UploadFile = File(...),
     db: Session = Depends(get_db),
 ):
-    # resume.file is a SpooledTemporaryFile; upload_and_store_resume expects file-like object with .file.read()
     result = upload_and_store_resume(db, candidate_id, job_id, resume)
     return {"message": "uploaded", "data": result}
+
 
 @router.post("/match/{job_id}")
 def match_job_endpoint(job_id: int, top_k: Optional[int] = 20, db: Session = Depends(get_db)):

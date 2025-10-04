@@ -149,16 +149,14 @@ class ResumeParsing(Base):
     __tablename__ = "resume_parsing"
 
     parsing_id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    candidate_id: Mapped[int] = mapped_column(ForeignKey("candidate.candidate_id", ondelete="CASCADE"))
-    job_id: Mapped[int] = mapped_column(ForeignKey("job.job_id", ondelete="CASCADE"))
-
-    parsed_text: Mapped[str] = mapped_column(Text, nullable=True)  # full extracted resume text
-    skills_extracted: Mapped[str] = mapped_column(Text, nullable=True)
-    experience_extracted: Mapped[str] = mapped_column(Text, nullable=True)
-    education_extracted: Mapped[str] = mapped_column(Text, nullable=True)
-
-    ai_score: Mapped[float] = mapped_column(Float, nullable=True)  # final AI matching score
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc))
+    candidate_id: Mapped[int] = mapped_column(ForeignKey("candidate.candidate_id"))
+    job_id: Mapped[int] = mapped_column(ForeignKey("job.job_id"))
+    parsed_text: Mapped[str] = mapped_column(Text, nullable=True)
+    skills_extracted: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    experience_extracted: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    education_extracted: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    ai_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
 class ResumeJobMatch(Base):
