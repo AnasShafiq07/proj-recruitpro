@@ -19,10 +19,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Stripe config
-stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+stripe.api_key = "sk_test_51SAVjyLr6v0ksVBDFsrOofxFI3dwWvy4tWX4034hlXk68yfmtmMAXjkegDszR1VjMopzq2siTlze17wKL63BgfnU0000oIHIrV"
 
 # ⚡ Option 1: Use webhook secret from CLI (local only)
-WEBHOOK_SECRET = "whsec_a5ac4114c6ec1ef5a6a124f1c6406a33f445f9494ff46c4bf98c4a44a3a97672"
+WEBHOOK_SECRET = "whsec_339d67665a25ddfd79035d7e42fb178130ee0c053ae00a1e915766f8a7cf74f7"
 
 router = APIRouter(prefix="/payments", tags=["Payments"])
 
