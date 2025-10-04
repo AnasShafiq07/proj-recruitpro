@@ -18,7 +18,7 @@ router = APIRouter(prefix="/hr-managers", tags=["HR Managers"], dependencies=[De
 
 
 @router.get("/curr-hr")
-def get_current_hr(db: Session = Depends(get_db), hr:HRManager = Depends(get_current_hr)):
+def get_current_hr(hr:HRManager = Depends(get_current_hr)):
     return {
         "id": hr.id,
         "name": hr.name,
