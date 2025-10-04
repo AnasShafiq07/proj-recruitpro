@@ -7,8 +7,10 @@ import uuid, requests, os
 from email.mime.text import MIMEText
 from app.db.session import get_db
 from app.db.models import HRManager
-from app.services.google_calendar import create_or_update_google_token, get_google_token
+from app.services.google_calendar import create_or_update_google_token, get_google_token, delete_google_token
+from app.services.hr_manager import get_hr_manager
 from app.schemas.google import EventCreate, EmailPayload
+from app.core.security import get_current_hr
 
 
 
@@ -21,12 +23,58 @@ REDIRECT_URI = "http://localhost:8000/google/auth/callback"
 SCOPES = "openid email profile https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/gmail.send"
 
 
+
+
+def refresh_google_token(db: Session, hr_id: int, token):
+    print("Refreshing access token")
+    token_url = "https://oauth2.googleapis.com/token"
+
+    data = {
+        "client_id": CLIENT_ID,
+        "client_secret": CLIENT_SECRET,
+        "refresh_token": token.refresh_token,
+        "grant_type": "refresh_token"
+    }
+    resp = requests.post(token_url, data=data)
+    if resp.status_code != 200:
+        raise HTTPException(status_code=resp.status_code, detail=resp.json())
+
+    token_data = resp.json()
+    new_access_token = token_data["access_token"]
+    expires_in = token_data["expires_in"]
+
+    updated_token = create_or_update_google_token(
+        db=db,
+        hr_id=hr_id,
+        user_id=token.user_id,
+        access_token=new_access_token,
+        refresh_token=token.refresh_token,
+        expires_in=expires_in
+    )
+    return updated_token
+
+
+def get_valid_token(db: Session, hr_id: int):
+    token = get_google_token(db, hr_id)
+
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated with google")
+    if token.expires_at <= datetime.now(timezone.utc):
+        token = refresh_google_token(db, hr_id, token)
+    return token
+
+
 @router.get("/auth/login/{hr_id}")
 def login_google(hr_id: int, db: Session = Depends(get_db)):
-    hr = db.query(HRManager).filter_by(id=hr_id).first()
+    hr = get_hr_manager(db, hr_id)
     if not hr:
         raise HTTPException(status_code=404, detail="HR Manager not found")
+    
+    token = get_google_token(db, hr_id)
+    if token:
+        delete_google_token(db, hr_id)
 
+    
     google_auth_url = (
         "https://accounts.google.com/o/oauth2/v2/auth"
         f"?response_type=code&client_id={CLIENT_ID}"
@@ -95,21 +143,22 @@ def auth_callback(request: Request, code: str = None, error: str = None, state: 
         "expires_at": token.expires_at
     }
 
-@router.get("/auth/status/{hr_id}")
-def auth_status(hr_id: int, db: Session = Depends(get_db)):
-    token = get_google_token(db, hr_id)
-    if not token:
+@router.get("/auth/status")
+def auth_status(db: Session = Depends(get_db), hr: HRManager = Depends(get_current_hr)):
+    token = get_google_token(db, hr.id)
+    if not token or token.expires_at <= datetime.now(timezone.utc):
         return {"authenticated": False}
+        
     return {
         "authenticated": True,
         "expires_at": token.expires_at,
-        "hr_id": hr_id
+        "hr_id": hr.id
     }
 
 # Create Calendar Event with Meet
 @router.post("/create_event")
-def create_event(event_data: EventCreate, db: Session = Depends(get_db)):
-    token = get_google_token(db, event_data.hr_id)
+def create_event(event_data: EventCreate, db: Session = Depends(get_db), hr: HRManager = Depends(get_current_hr)):
+    token = get_valid_token(db, hr.id)
     if not token:
         raise HTTPException(status_code=401, detail="Not authenticated with Google")
 
@@ -150,12 +199,12 @@ def create_event(event_data: EventCreate, db: Session = Depends(get_db)):
     }
 
 
-@router.post("send_email")
-def send_email(payload: EmailPayload, db: Session = Depends(get_db)):
+@router.post("/send_email")
+def send_email(payload: EmailPayload, db: Session = Depends(get_db), hr: HRManager = Depends(get_current_hr)):
     
-    token = get_google_token(db, payload.hr_id)
+    token = get_valid_token(db, hr.id)
     if not token:
-        raise HTTPException(status_code=401, detail="Hp not authenticated with Google")
+        raise HTTPException(status_code=401, detail="Hr not authenticated with Google")
     access_token = token.access_token
     message = MIMEText(payload.content)
     message["to"] = payload.recipient
