@@ -14,6 +14,7 @@ from .resume_parsing import router as resume_parsing_router
 from .linkedIn_posting import router as linkedIn_router
 from .generate_content import router as generate_content_router
 from .google_api import router as google_apis_router
+from .hr_availability import router as availability_router
 
-__all__ = ["auth_router", "analyzer_router", "dashboard_router", "candidate_router", "company_router", "feedback_router", "hr_manager_router", "interview_router", "job_router", "notification_router", "offer_letter_router", "payment_router", "resume_parsing_router", "linkedIn_router", "generate_content_router", "google_apis_router"]
+__all__ = ["auth_router", "analyzer_router", "dashboard_router", "candidate_router", "company_router", "feedback_router", "hr_manager_router", "interview_router", "job_router", "notification_router", "offer_letter_router", "payment_router", "resume_parsing_router", "linkedIn_router", "generate_content_router", "google_apis_router", "availability_router"]
 

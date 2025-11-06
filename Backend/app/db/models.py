@@ -33,6 +33,74 @@ class HRManager(Base):
     tokens: Mapped[list["AuthToken"]] = relationship(back_populates="hr_manager")
     linkedin_tokens: Mapped[list["LinkedInToken"]] = relationship(back_populates="hr_manager")
     google_tokens: Mapped[list["GoogleToken"]] = relationship(back_populates="hr_manager")
+    availability: Mapped[list["HRAvailability"]] = relationship(back_populates="hr_manager", cascade="all, delete-orphan")
+
+
+class HRAvailability(Base):
+    __tablename__ = "hr_availability"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    hr_id: Mapped[int] = mapped_column(ForeignKey("hr_manager.id"), nullable=False)
+    
+    # ["Monday", "Wednesday", "Friday"]
+    days: Mapped[str] = mapped_column(Text, nullable=False)
+    start_time: Mapped[str] = mapped_column(String, nullable=False)
+    end_time: Mapped[str] = mapped_column(String, nullable=False)    
+    duration_minutes: Mapped[int] = mapped_column(Integer, default=30)
+    break_minutes: Mapped[int] = mapped_column(Integer, default=0)
+    start_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    end_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc))
+    
+    # Relationships
+    hr_manager: Mapped["HRManager"] = relationship(back_populates="availability")
+    slots: Mapped[list["InterviewSlot"]] = relationship(back_populates="availability", cascade="all, delete-orphan")
+
+
+class Interview(Base):
+    __tablename__ = "interview"
+
+    interview_id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    candidate_id: Mapped[int] = mapped_column(ForeignKey("candidate.candidate_id"), nullable=False)
+    job_id: Mapped[int] = mapped_column(ForeignKey("job.job_id"), nullable=False)
+    scheduled_time: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    meet_link: Mapped[str] = mapped_column(String, nullable=True)
+    status: Mapped[str] = mapped_column(String, default="Scheduled")
+    slot_id: Mapped[Optional[int]] = mapped_column(ForeignKey("interview_slot.id"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc))
+
+    # Each interview is linked to exactly one slot
+    slot: Mapped[Optional["InterviewSlot"]] = relationship(
+        "InterviewSlot",
+        back_populates="interview",
+        foreign_keys=[slot_id],
+        uselist=False,  # one-to-one
+    )
+
+    candidate: Mapped["Candidate"] = relationship()
+
+
+class InterviewSlot(Base):
+    __tablename__ = "interview_slot"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    availability_id: Mapped[int] = mapped_column(ForeignKey("hr_availability.id", ondelete="CASCADE"), nullable=False)
+    date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    start_time: Mapped[str] = mapped_column(String, nullable=False)
+    end_time: Mapped[str] = mapped_column(String, nullable=False)
+    is_booked: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    # No need for interview_id column anymore
+    availability: Mapped["HRAvailability"] = relationship(back_populates="slots")
+
+    # Each slot can have at most one interview
+    interview: Mapped[Optional["Interview"]] = relationship(
+        "Interview",
+        back_populates="slot",
+        uselist=False,
+    )
+
 
 
 class LinkedInToken(Base):
@@ -119,13 +187,13 @@ class Candidate(Base):
     experience: Mapped[str] = mapped_column(Text, nullable=True)
     education: Mapped[str] = mapped_column(Text, nullable=True)
     resume_url: Mapped[str] = mapped_column(String)
-
+    selected_for_interview: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
+    selected: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
     
     notifications: Mapped[list["Notification"]] = relationship(back_populates="candidate")
     answers: Mapped[list["Answer"]] = relationship(back_populates="candidate", cascade="all, delete-orphan")
     resume_parsing: Mapped["ResumeParsing"] = relationship(back_populates="candidate", uselist=False)
 
-    #applications: Mapped[list["Application"]] = relationship(back_populates="candidate")
 
 class Answer(Base):
     __tablename__ = "answer"
@@ -152,16 +220,6 @@ class ResumeParsing(Base):
 
     # relationship to candidate
     candidate: Mapped["Candidate"] = relationship(back_populates="resume_parsing")
-
-
-
-class Interview(Base):
-    __tablename__ = "interview"
-
-    interview_id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    scheduled_time: Mapped[datetime] = mapped_column(DateTime, nullable=True)
-    meet_link: Mapped[str] = mapped_column(String, nullable=True)
-    status: Mapped[str] = mapped_column(String, nullable=True)
 
 
 class OfferLetter(Base):

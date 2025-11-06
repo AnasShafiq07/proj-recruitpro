@@ -42,3 +42,16 @@ class CandidateOut(CandidateBase):
 
     class Config:
         from_attributes = True
+
+
+
+class SelectedCandidateBase(BaseModel):
+    candidate_id: int
+    hr_id: int
+    job_id: int
+    selected_for_interview: bool = False
+    selected: bool = False
+    selection_reason: str | None = None
+
+class SelectedCandidateCreate(SelectedCandidateBase):
+    pass

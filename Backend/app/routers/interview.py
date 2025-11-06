@@ -7,7 +7,7 @@ from app.schemas.interview import InterviewCreate, InterviewUpdate, InterviewOut
 from app.services.interview import (
     create_interview,
     get_interview,
-    get_interviews,
+    get_interviews_by_job,
     update_interview,
     delete_interview,
 )
@@ -26,9 +26,9 @@ def get_interview_endpoint(interview_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Interview not found")
     return db_interview
 
-@router.get("/", response_model=List[InterviewOut])
-def get_all_interviews(db: Session = Depends(get_db)):
-    return get_interviews(db)
+@router.get("/by-job", response_model=List[InterviewOut])
+def get_all_interviews(job_id: int, db: Session = Depends(get_db)):
+    return get_interviews_by_job(db, job_id)
 
 @router.put("/{interview_id}", response_model=InterviewOut)
 def update_interview_endpoint(interview_id: int, interview: InterviewUpdate, db: Session = Depends(get_db)):

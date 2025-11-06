@@ -6,12 +6,22 @@ from datetime import datetime, timedelta, timezone
 import uuid, requests, os
 from email.mime.text import MIMEText
 from app.db.session import get_db
-from app.db.models import HRManager
+from app.db.models import HRManager, HRAvailability, Candidate
 from app.services.google_calendar import create_or_update_google_token, get_google_token, delete_google_token
 from app.services.hr_manager import get_hr_manager
-from app.schemas.google import EventCreate, EmailPayload
+from app.schemas.google import EventCreate, EmailPayload, SchedulingDetails
 from app.core.security import get_current_hr
 
+from app.services.hr_availability import get_availability
+import json
+from app.services.candidate import get_candidates_without_interview
+from app.services.interview import create_interview
+from app.schemas.interview import InterviewCreate
+
+WEEKDAY_MAP = {
+    "Monday": 0, "Tuesday": 1, "Wednesday": 2, "Thursday": 3,
+    "Friday": 4, "Saturday": 5, "Sunday": 6
+}
 
 
 router = APIRouter(prefix="/google", tags=["Google Calendar, Meet & Gmail"])
@@ -191,13 +201,115 @@ def create_event(event_data: EventCreate, db: Session = Depends(get_db), hr: HRM
     if create_resp.status_code not in [200, 201]:
         raise HTTPException(status_code=create_resp.status_code, detail=create_resp.json())
 
-    created_event = create_resp.json()
+    created_event = create_resp.json()   
     return {
         "eventId": created_event["id"],
         "meetLink": created_event.get("hangoutLink"),
         "htmlLink": created_event.get("htmlLink")
     }
 
+
+@router.post("/schedule_interviews")
+def schedule_all_interviews(data: SchedulingDetails,db: Session = Depends(get_db), hr: HRManager = Depends(get_current_hr)):
+    availability: HRAvailability = get_availability(db, hr.id)
+    if not availability:
+        raise HTTPException(status_code=400, detail="HR availability not configured")
+
+    days = json.loads(availability.days)
+    duration = timedelta(minutes=availability.duration_minutes)
+    break_time = timedelta(minutes=availability.break_minutes)
+    start_time = datetime.strptime(availability.start_time, "%H:%M").time()
+    end_time = datetime.strptime(availability.end_time, "%H:%M").time()
+
+    # Get all candidates who don't yet have interviews
+    candidates = get_candidates_without_interview(db, hr.id, data.job_id)
+
+    if not candidates:
+        raise HTTPException(status_code=404, detail="No pending candidates found for interview scheduling")
+
+    # Generate all interview slots
+    current_date = availability.start_date.date()
+    end_date = availability.end_date.date()
+    all_slots = []
+
+    while current_date <= end_date:
+        weekday = current_date.weekday()
+        weekday_name = list(WEEKDAY_MAP.keys())[weekday]
+
+        if weekday_name in days:
+            current_start = datetime.combine(current_date, start_time)
+            current_end = datetime.combine(current_date, end_time)
+
+            while current_start + duration <= current_end:
+                all_slots.append(current_start)
+                current_start += duration + break_time
+
+        current_date += timedelta(days=1)
+
+    if not all_slots:
+        raise HTTPException(status_code=400, detail="No valid interview slots found")
+
+    # Get HR's Google token
+    token = get_valid_token(db, hr.id)
+    access_token = token.access_token
+    headers = {"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"}
+
+    # Schedule for each candidate
+    created_interviews = []
+    for i, candidate in enumerate(candidates):
+        if i >= len(all_slots):
+            break
+
+        slot_start = all_slots[i]
+        slot_end = slot_start + duration
+
+        # Create Google Calendar event with Meet
+        event = {
+            "summary": data.summary,
+            "description": data.description,
+            "start": {"dateTime": slot_start.isoformat(), "timeZone": "UTC"},
+            "end": {"dateTime": slot_end.isoformat(), "timeZone": "UTC"},
+            "attendees": [{"email": candidate.email}],
+            "conferenceData": {
+                "createRequest": {
+                    "requestId": str(uuid.uuid4()),
+                    "conferenceSolutionKey": {"type": "hangoutsMeet"}
+                }
+            }
+        }
+
+        create_resp = requests.post(
+            "https://www.googleapis.com/calendar/v3/calendars/primary/events?conferenceDataVersion=1&sendUpdates=all",
+            headers=headers,
+            json=event
+        )
+
+        if create_resp.status_code not in [200, 201]:
+            raise HTTPException(status_code=create_resp.status_code, detail=create_resp.json())
+
+        created_event = create_resp.json()
+        meet_link = created_event.get("hangoutLink")
+
+        # Save interview to DB
+        create_interview(db, InterviewCreate(
+            candidate_id=candidate.candidate_id,
+            job_id=candidate.job_id,
+            scheduled_time=slot_start,
+            meet_link=meet_link
+        ))
+
+        created_interviews.append({
+            "candidate": candidate.name,
+            "email": candidate.email,
+            "time": slot_start.isoformat(),
+            "meetLink": meet_link,
+            "calendarLink": created_event.get("htmlLink")
+        })
+
+    return {
+        "total_interviews_scheduled": len(created_interviews),
+        "scheduled": created_interviews
+    }
 
 @router.post("/send_email")
 def send_email(payload: EmailPayload, db: Session = Depends(get_db), hr: HRManager = Depends(get_current_hr)):

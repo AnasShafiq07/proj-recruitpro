@@ -36,7 +36,6 @@ def authentication_hr(email: str, password: str) -> Optional[HRManager]:
 
 def require_role(role: str):
     def __require_role(hr_data: HRManager = Depends(get_current_hr)):
-        print(role)
         print(hr_data.role)
         if role != hr_data.role:
             raise HTTPException(status_code=403, detail="Forbidden insufficient role")
