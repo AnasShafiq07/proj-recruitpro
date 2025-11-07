@@ -4,7 +4,6 @@ from app.schemas.candidate import CandidateCreate, CandidateUpdate, CandidateCre
 
 
 def create_candidate(db: Session, candidate_data: CandidateCreateWithAnswersAndPayment):
-    # create candidate
     db_candidate = models.Candidate(
         job_id = candidate_data.job_id,
         name=candidate_data.name,
@@ -53,6 +52,7 @@ def get_candidates_without_interview(db: Session, hr_id: int, job_id: int):
         .join(models.Job, models.Candidate.job_id == models.Job.job_id)
         .filter(models.Job.hr_id == hr_id)
         .filter(models.Candidate.job_id == job_id)
+        .filter(models.Candidate.selected_for_interview == True)
         .filter(
             ~models.Candidate.candidate_id.in_(
                 db.query(models.Interview.candidate_id)
@@ -61,6 +61,23 @@ def get_candidates_without_interview(db: Session, hr_id: int, job_id: int):
         .all()
     )
 
+def select_for_interview(db: Session, candidate_id: int):
+    db_candidate = get_candidate(db, candidate_id)
+    if not db_candidate:
+        return None
+    db_candidate.selected_for_interview = True
+    db.commit()
+    db.refresh(db_candidate)
+    return db_candidate
+
+def select_candidate(db: Session, candidate_id: int):
+    db_candidate = get_candidate(db, candidate_id)
+    if not db_candidate:
+        return None
+    db_candidate.selected = True
+    db.commit()
+    db.refresh(db_candidate)
+    return db_candidate
 
 def update_candidate(db: Session, candidate_id: int, candidate: CandidateUpdate):
     db_candidate = get_candidate(db, candidate_id)

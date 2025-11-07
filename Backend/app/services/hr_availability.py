@@ -8,7 +8,6 @@ from app.schemas.interview import (
     HRAvailabilityCreate, HRAvailabilityUpdate
 )
 
-# ---------- HR AVAILABILITY CRUD ----------
 def create_availability(db: Session, hr_id: int, data: HRAvailabilityCreate):
     db_obj = models.HRAvailability(
         hr_id=hr_id,

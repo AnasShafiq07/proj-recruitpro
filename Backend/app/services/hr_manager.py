@@ -4,7 +4,6 @@ from app.schemas.hr_manager import HRManagerCreate, HRManagerUpdate
 from app.utilities.password import hash_password
 
 
-
 def create_hr_manager(db: Session, hr_in: HRManagerCreate) -> HRManager:
     db_hr = HRManager(
         name=hr_in.name,
