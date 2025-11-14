@@ -22,6 +22,9 @@ def create_hr_availability(
     db: Session = Depends(get_db),
     hr: HRManager = Depends(get_current_hr)
 ):
+    weekdays = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday"}
+    if not set(data.days).issubset(weekdays):
+        raise HTTPException(status_code=400, detail="Only Monday–Friday allowed.")
     availability = create_availability(db, hr.id, data)
     return availability
 

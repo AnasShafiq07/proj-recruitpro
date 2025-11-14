@@ -14,6 +14,9 @@ from app.services.candidate import (
     get_candidates,
     update_candidate,
     delete_candidate,
+    select_candi,
+    get_selected_for_interview,
+    get_selected_candi
 )
 
 from app.services.payment import create_stripe_payment_intent, create_payment_record
@@ -65,7 +68,15 @@ def get_candidate_endpoint(candidate_id: int, db: Session = Depends(get_db)):
     return db_candidate
 
 
-@router.get("/", response_model=List[CandidateOut])
+@router.post("/select/{candidate_id}")
+def select_candidate(candidate_id: int, db: Session = Depends(get_db)):
+    candidate = get_candidate(db, candidate_id)
+    if not candidate or candidate.selected_for_interview == False:
+        raise HTTPException(status_code=404, detail="Candidate not present or have not given interview")    
+    select_candi(db, candidate_id)
+    return True    
+
+@router.get("/")
 def get_all_candidates(db: Session = Depends(get_db)):
     return get_candidates(db)
 
@@ -86,3 +97,22 @@ def delete_candidate_endpoint(candidate_id: int, db: Session = Depends(get_db)):
     if not deleted:
         raise HTTPException(status_code=404, detail="Candidate not found")
     return None
+
+
+@router.get("/filter/selected-for-interview")
+def get_candidates_selected_for_interview(db: Session = Depends(get_db)):
+    # return get_selected_for_interview(db)
+    candiadates = get_selected_for_interview(db)
+    return {
+        "candidates": candiadates,
+        "length": len(candiadates)
+    }
+
+
+@router.get("/filter/selected-candidates")
+def get_selected_candidates(db: Session = Depends(get_db)):
+    candidates = get_selected_candi(db)
+    return {
+        "candidates": candidates,
+        "length": len(candidates)
+    }

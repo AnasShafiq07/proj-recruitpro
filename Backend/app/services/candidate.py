@@ -70,7 +70,15 @@ def select_for_interview(db: Session, candidate_id: int):
     db.refresh(db_candidate)
     return db_candidate
 
-def select_candidate(db: Session, candidate_id: int):
+def get_selected_for_interview(db: Session):
+    candidates = db.query(models.Candidate).filter(models.Candidate.selected_for_interview == True).all()
+    return candidates
+
+def get_selected_candi(db: Session):
+    candidates = db.query(models.Candidate).filter(models.Candidate.selected == True).all()
+    return candidates
+
+def select_candi(db: Session, candidate_id: int):
     db_candidate = get_candidate(db, candidate_id)
     if not db_candidate:
         return None

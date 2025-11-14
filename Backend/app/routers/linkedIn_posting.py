@@ -2,12 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, Form,
 from fastapi.responses import RedirectResponse
 import requests
 from sqlalchemy.orm import Session
-import shutil
-import os
-
 from app.db.session import get_db
 from app.db.models import HRManager
-from app.services.linkedin_posting import create_or_update_linkedin_token, get_linkedin_token
+from app.services.linkedin_posting import create_or_update_linkedin_token, get_linkedin_token, create_linkedin_post
 from app.core.security import get_current_hr
 
 CLIENT_ID = "86s3nqmu4gikyr"
@@ -103,68 +100,4 @@ def auth_status(hr_id: int, db: Session = Depends(get_db)):
 @router.post("/post/{hr_id}")
 async def post_to_linkedin(hr_id: int, caption: str = Form(...), image: UploadFile = None,
     db: Session = Depends(get_db)):
-    
-    token = get_linkedin_token(db, hr_id)
-    if not token:
-        raise HTTPException(status_code=401, detail="HR Manager not authenticated with LinkedIn")
-
-    headers = {
-        "Authorization": f"Bearer {token.access_token}",
-        "Content-Type": "application/json",
-        "X-Restli-Protocol-Version": "2.0.0"
-    }
-
-    register_url = "https://api.linkedin.com/v2/assets?action=registerUpload"
-    register_body = {
-        "registerUploadRequest": {
-            "recipes": ["urn:li:digitalmediaRecipe:feedshare-image"],
-            "owner": token.urn,
-            "serviceRelationships": [
-                {
-                    "relationshipType": "OWNER",
-                    "identifier": "urn:li:userGeneratedContent"
-                }
-            ]
-        }
-    }
-
-    reg_resp = requests.post(register_url, headers=headers, json=register_body)
-    if reg_resp.status_code != 200:
-        raise HTTPException(status_code=reg_resp.status_code, detail=reg_resp.json())
-
-    reg_data = reg_resp.json()
-    upload_url = reg_data["value"]["uploadMechanism"]["com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest"]["uploadUrl"]
-    asset = reg_data["value"]["asset"]
-
-    with open(image.filename, "wb") as buffer:
-        shutil.copyfileobj(image.file, buffer)
-
-    with open(image.filename, "rb") as f:
-        upload_resp = requests.put(upload_url, data=f, headers={"Authorization": f"Bearer {token.access_token}"})
-
-    os.remove(image.filename)
-
-    if upload_resp.status_code not in [200, 201]:
-        raise HTTPException(status_code=upload_resp.status_code, detail="Image upload failed")
-
-    post_url = "https://api.linkedin.com/v2/ugcPosts"
-    post_body = {
-        "author": token.urn,
-        "lifecycleState": "PUBLISHED",
-        "specificContent": {
-            "com.linkedin.ugc.ShareContent": {
-                "shareCommentary": {"text": caption},
-                "shareMediaCategory": "IMAGE",
-                "media": [{"status": "READY", "media": asset}]
-            }
-        },
-        "visibility": {
-            "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"
-        }
-    }
-
-    post_resp = requests.post(post_url, headers=headers, json=post_body)
-    if post_resp.status_code not in [200, 201]:
-        raise HTTPException(status_code=post_resp.status_code, detail=post_resp.json())
-
-    return {"message": "Post created successfully", "response": post_resp.json()}
+    return create_linkedin_post(db, hr_id, caption, image)
