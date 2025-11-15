@@ -10,7 +10,7 @@ from app.authorization.auth import create_access_token, create_refresh_token, AC
 from app.core.security import authentication_hr, require_role, get_current_hr
 from app.utilities.password import hash_password
 from app.services.company import create_company
-from app.services.hr_manager import create_hr_manager, update_hr_manager
+from app.services.hr_manager import create_hr_manager, update_hr_manager, get_hr_by_email
 from app.schemas.auth_token import AuthTokenCreate
 from datetime import datetime, timezone
 from app.services.auth import add_access_token, create_blacklisted_token
@@ -48,6 +48,11 @@ def signup_admin(hr: HRManagerCreate, db: Session = Depends(get_db)):
         "token_type": "bearer"
     }
 
+@router.get("/check-email")
+def check_email_exists(email: str, db: Session = Depends(get_db)):
+    hr = get_hr_by_email(db, email)
+    if not hr: return True 
+    else: return False
 
 @router.post("/hr/login")
 def login_hr(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):

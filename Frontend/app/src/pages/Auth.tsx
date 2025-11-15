@@ -11,10 +11,10 @@ const Auth = () => {
       <div className="relative z-10 w-full max-w-md px-6 py-8 animate-fade-in">
         <div className="mb-8 text-center">
           <Link to="/">
-            <h1 className="text-4xl font-bold text-primary mb-2">rekroot</h1>
+            <h1 className="text-4xl font-bold text-primary mb-2">RecruitPro</h1>
           </Link>
           <p className="text-muted-foreground">
-            Get your new dream job today!
+            A smart hiring platform!
           </p>
         </div>
 

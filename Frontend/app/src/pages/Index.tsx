@@ -10,13 +10,13 @@ const Index = () => {
       
       <div className="text-center relative z-10 px-6 max-w-3xl animate-fade-in">
         <h1 className="mb-4 text-6xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-          rekroot
+          RecruitPro
         </h1>
         <p className="text-2xl text-foreground mb-3">
-          Get your new dream job today!
+          A smart hiring platform!
         </p>
         <p className="text-lg text-muted-foreground mb-8">
-          26,478 Offers Worldwide
+          26,478 Companies Using Worldwide
         </p>
         <div className="flex gap-4 justify-center">
           <Link to="/auth">
