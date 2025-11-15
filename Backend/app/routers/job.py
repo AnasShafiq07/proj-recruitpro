@@ -20,11 +20,10 @@ from app.core.security import get_current_hr
 router = APIRouter(prefix="/jobs", tags=["Jobs"])
 
 @router.post("/", status_code=status.HTTP_201_CREATED, dependencies=[Depends(get_current_hr)])
-def create_job_endpoint(job: JobCreateWithFormCreate, db: Session = Depends(get_db), request: Request = None ):
+def create_job_endpoint(job: JobCreateWithFormCreate, db: Session = Depends(get_db), request: Request = None, hr: HRManager = Depends(get_current_hr)):
+    job.hr_id = hr.id
     new_job = create_job(db, job)
-    # Build absolute URL
-    base_url = str(request.base_url).rstrip("/")
-    url = f"{base_url}/jobs/url/{new_job.slug}"
+    url = new_job.slug
     return {
         "job": new_job,
         "job_link": url

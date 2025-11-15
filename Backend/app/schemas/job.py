@@ -5,6 +5,7 @@ from typing import Optional
 from .questions_form import QuestionsFormCreate, QuestionsFormUpdate
 
 class JobBase(BaseModel):
+    department_id: Optional[int] = None
     title: str
     description: Optional[str] = None
     requirements: Optional[str] = None
@@ -12,10 +13,12 @@ class JobBase(BaseModel):
     salary_range: Optional[str] = None
     deadline: Optional[datetime] = None
     application_fee: Optional[float] = None
+    skills_weight: Optional[float] = None
+    experience_weight: Optional[float] = None
 
 
 class JobCreate(JobBase):
-    hr_id: int
+    hr_id: Optional[int] = None
 
 class JobCreateWithFormCreate(JobCreate):
     questions_form: Optional[QuestionsFormCreate] = None

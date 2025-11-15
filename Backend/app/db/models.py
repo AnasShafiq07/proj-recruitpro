@@ -2,7 +2,7 @@
 from datetime import datetime, timezone
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import String, Integer, Text, DateTime, Float, Boolean, ForeignKey
-from typing import Optional
+from typing import Optional, List
 from app.database import Base
 import uuid
 
@@ -139,18 +139,29 @@ class Job(Base):
 
     job_id: Mapped[int] = mapped_column(primary_key=True, index=True)
     hr_id: Mapped[int] = mapped_column(ForeignKey("hr_manager.id"))
+    department_id: Mapped[int] = mapped_column(ForeignKey("department.department_id"), nullable=True) 
     title: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=True)
     requirements: Mapped[str] = mapped_column(Text, nullable=True)
+    experience: Mapped[float] = mapped_column(Float, nullable=True)
     location: Mapped[str] = mapped_column(String, nullable=True)
     salary_range: Mapped[str] = mapped_column(String, nullable=True)
     deadline: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     application_fee: Mapped[float] = mapped_column(Float, nullable=True)
+    skills_weight: Mapped[float] = mapped_column(Float, nullable=True)
+    experience_weight: Mapped[float] = mapped_column(Float, nullable=True)
     slug: Mapped[str] = mapped_column(String, unique=True, default=lambda: str(uuid.uuid4()))
 
     hr_manager: Mapped["HRManager"] = relationship(back_populates="jobs")
+    department: Mapped["Department"] = relationship(back_populates="jobs") 
     question_form: Mapped["QuestionsForm"] = relationship(back_populates="job")
 
+
+class Department(Base):
+    __tablename__ = "department"
+    department_id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    department_name: Mapped[str] = mapped_column(String)
+    jobs: Mapped[List["Job"]] = relationship(back_populates="department")
 
 
 class QuestionsForm(Base):

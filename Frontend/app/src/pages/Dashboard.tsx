@@ -2,6 +2,7 @@ import { useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { JobCard } from "@/components/jobs/JobCard";
 import { Button } from "@/components/ui/button";
+import DepartmentForm from "./Depatments";
 import { Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -92,6 +93,7 @@ const Dashboard = () => {
             <Plus className="h-5 w-5" />
             Create Job Posting
           </Button>
+          
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

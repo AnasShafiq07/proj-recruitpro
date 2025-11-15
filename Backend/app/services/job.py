@@ -9,13 +9,16 @@ def create_job(db: Session, job_data: JobCreateWithFormCreate):
     # create job
     db_job: models.Job = models.Job(
         hr_id = job_data.hr_id,
+        department_id = job_data.department_id,
         title = job_data.title,
         description = job_data.description,
         requirements = job_data.requirements,
         location = job_data.location,
         salary_range = job_data.salary_range, 
         deadline = job_data.deadline,
-        application_fee = job_data.application_fee
+        application_fee = job_data.application_fee,
+        skills_weight = job_data.skills_weight,
+        experience_weight = job_data.experience_weight
     )
     db.add(db_job)
     db.commit()

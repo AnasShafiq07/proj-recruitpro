@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Search, MapPin, Briefcase, Clock } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import DepartmentForm from "./Depatments";
 
 // Mock data
 const jobCategories = [
@@ -64,10 +65,16 @@ const Jobs = () => {
   return (
     <DashboardLayout>
       <div className="p-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Job Postings</h1>
-          <p className="text-muted-foreground">Browse and manage all job listings</p>
+        <div className="mb-8 flex items-start justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground mb-2">Job Postings</h1>
+            <p className="text-muted-foreground">Browse and manage all job listings</p>
+          </div>
+        <div className="ml-auto">
+          <DepartmentForm />
         </div>
+      </div>
+
 
         {/* Search Bar */}
         <div className="bg-card rounded-lg shadow-sm p-6 mb-8 border border-border">

@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
+import DepartmentForm from "./pages/Depatments";
 import Jobs from "./pages/Jobs";
 import Candidates from "./pages/Candidates";
 import CreateJob from "./pages/CreateJob";
@@ -29,6 +30,7 @@ const App = () => (
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/jobs" element={<Jobs />} />
           <Route path="/jobs/create" element={<CreateJob />} />
+          <Route path="/department" element={<DepartmentForm />}/>
           <Route path="/candidates" element={<Candidates />} />
           <Route path="/schedule" element={<Schedule />} />
           <Route path="/offers" element={<Offers />} />
