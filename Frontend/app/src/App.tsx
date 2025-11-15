@@ -1,14 +1,45 @@
-import './App.css'
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Index from "./pages/Index";
+import Auth from "./pages/Auth";
+import Dashboard from "./pages/Dashboard";
+import Jobs from "./pages/Jobs";
+import Candidates from "./pages/Candidates";
+import CreateJob from "./pages/CreateJob";
+import Schedule from "./pages/Schedule";
+import Offers from "./pages/Offers";
+import Internal from "./pages/Internal";
+import Settings from "./pages/Settings";
+import NotFound from "./pages/NotFound";
 
-function App() {
+const queryClient = new QueryClient();
 
-  return (
-    <>
-       <h1 className="text-3xl text-blue-500 font-bold underline">
-           Hello world!
-       </h1>
-    </>
-  )
-}
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider>
+      <Toaster />
+      <Sonner />
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Index />} />
+          <Route path="/auth" element={<Auth />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/jobs" element={<Jobs />} />
+          <Route path="/jobs/create" element={<CreateJob />} />
+          <Route path="/candidates" element={<Candidates />} />
+          <Route path="/schedule" element={<Schedule />} />
+          <Route path="/offers" element={<Offers />} />
+          <Route path="/internal" element={<Internal />} />
+          <Route path="/settings" element={<Settings />} />
+          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </BrowserRouter>
+    </TooltipProvider>
+  </QueryClientProvider>
+);
 
-export default App
+export default App;

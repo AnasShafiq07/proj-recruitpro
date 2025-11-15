@@ -3,10 +3,12 @@ import base64
 import requests
 from dotenv import load_dotenv
 from fastapi import APIRouter, HTTPException, Depends
-
+from sqlalchemy.orm import Session
 from app.schemas.generate_content import PromptRequest, GenerationResponse
 from app.core.security import get_current_hr
-
+from app.db.session import get_db
+from app.services.linkedin_posting import create_linkedin_post
+from app.db.models import HRManager
 load_dotenv()
 
 FREEPIK_API_KEY = "FPSX4aa21629431134900c2f280554d91688"
@@ -53,7 +55,6 @@ async def generate_linkedin_post(request: PromptRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Image generation failed: {e}")
 
-    # Return the prompt as "caption" since Freepik cannot generate text
     return GenerationResponse(caption=request.prompt, image_base64=image_base64)
 
 
