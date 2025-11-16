@@ -50,7 +50,7 @@ class HRAvailability(Base):
     break_minutes: Mapped[int] = mapped_column(Integer, default=0)
     start_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     end_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-
+    is_selected: Mapped[bool] = mapped_column(Boolean, nullable=True, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc))
     
     # Relationships

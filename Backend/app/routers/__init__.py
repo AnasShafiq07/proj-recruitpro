@@ -16,6 +16,7 @@ from .generate_content import router as generate_content_router
 from .google_api import router as google_apis_router
 from .hr_availability import router as availability_router
 from .department import router as department_router
+from .static_files import router as static_router
 
-__all__ = ["auth_router", "analyzer_router", "dashboard_router", "candidate_router", "company_router", "feedback_router", "hr_manager_router", "interview_router", "job_router", "notification_router", "offer_letter_router", "payment_router", "resume_parsing_router", "linkedIn_router", "generate_content_router", "google_apis_router", "availability_router", "department_router"]
+__all__ = ["auth_router", "analyzer_router", "dashboard_router", "candidate_router", "company_router", "feedback_router", "hr_manager_router", "interview_router", "job_router", "notification_router", "offer_letter_router", "payment_router", "resume_parsing_router", "linkedIn_router", "generate_content_router", "google_apis_router", "availability_router", "department_router", "static_router"]
 

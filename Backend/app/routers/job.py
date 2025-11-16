@@ -29,7 +29,7 @@ def create_job_endpoint(job: JobCreateWithFormCreate, db: Session = Depends(get_
         "job_link": url
     }
 
-@router.get("/{job_id}", response_model=JobOut, dependencies=[Depends(get_current_hr)])
+@router.get("/{job_id}", dependencies=[Depends(get_current_hr)])
 def get_job_endpoint(job_id: int, db: Session = Depends(get_db)):
     db_job = get_job(db, job_id)
     if not db_job:

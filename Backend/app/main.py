@@ -1,12 +1,15 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from app.database import Base, engine
-from app.routers import analyzer_router, auth_router, candidate_router, company_router, dashboard_router, feedback_router, hr_manager_router, interview_router,  job_router, notification_router, offer_letter_router, payment_router, resume_parsing_router, linkedIn_router, generate_content_router, google_apis_router, availability_router, department_router
+from app.routers import analyzer_router, auth_router, candidate_router, company_router, dashboard_router, feedback_router, hr_manager_router, interview_router,  job_router, notification_router, offer_letter_router, payment_router, resume_parsing_router, linkedIn_router, generate_content_router, google_apis_router, availability_router, department_router, static_router
+
 
 
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="RecruitPro API")
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 
 origins = [
@@ -33,6 +36,7 @@ app.include_router(candidate_router)
 app.include_router(company_router)
 app.include_router(job_router)
 app.include_router(department_router)
+app.include_router(static_router)
 app.include_router(interview_router)
 app.include_router(feedback_router)
 app.include_router(notification_router)

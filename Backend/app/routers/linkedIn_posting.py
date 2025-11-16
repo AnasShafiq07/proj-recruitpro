@@ -98,6 +98,6 @@ def auth_status(hr_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/post/{hr_id}")
-async def post_to_linkedin(hr_id: int, caption: str = Form(...), image: UploadFile = None,
-    db: Session = Depends(get_db)):
-    return create_linkedin_post(db, hr_id, caption, image)
+async def post_to_linkedin(caption: str = Form(...), image: UploadFile = None,
+    db: Session = Depends(get_db), hr: HRManager = Depends(get_current_hr)):
+    return create_linkedin_post(db, hr.id, caption, image)

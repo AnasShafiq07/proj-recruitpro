@@ -11,11 +11,13 @@ from app.services.hr_availability import (
     get_availability,
     update_availability,
     delete_availability,
+    select_availability as select_avail
 )
+
+# base url : http://127.0.0.1:8000/
 
 router = APIRouter(prefix="/availability", tags=["HR Availability"])
 
-# ---------------- Create Availability ----------------
 @router.post("/")
 def create_hr_availability(
     data: HRAvailabilityCreate,
@@ -37,10 +39,15 @@ def list_hr_availability(
 ):
     
     availabilities = get_availability(db, hr.id)
-    if not availabilities:
-        raise HTTPException(status_code=404, detail="No availability found.")
+    # Return empty list if no availabilities exist (instead of 404)
     return availabilities
 
+@router.put("/select/{availability_id}")
+def select_availability(availability_id: int, db: Session = Depends(get_db)):
+    updated = select_avail(db, availability_id)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Availability not found.")
+    return updated
 
 # ---------------- Update Availability ----------------
 @router.put("/{availability_id}")

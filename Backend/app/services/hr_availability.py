@@ -25,7 +25,26 @@ def create_availability(db: Session, hr_id: int, data: HRAvailabilityCreate):
     return db_obj
 
 def get_availability(db: Session, hr_id: int):
-    return db.query(models.HRAvailability).filter(models.HRAvailability.hr_id == hr_id).first()
+    return db.query(models.HRAvailability).filter(models.HRAvailability.hr_id == hr_id).all()
+
+def select_availability(db: Session, availability_id: int):
+    target = db.query(models.HRAvailability).filter(
+        models.HRAvailability.id == availability_id
+    ).first()
+
+    if not target:
+        return None  
+
+    hr_id = target.hr_id
+
+    db.query(models.HRAvailability).filter(
+        models.HRAvailability.hr_id == hr_id
+    ).update({"is_selected": False})
+    target.is_selected = True
+
+    db.commit()
+    db.refresh(target)
+    return target
 
 def update_availability(db: Session, availability_id: int, data: HRAvailabilityUpdate):
     db_obj = db.query(models.HRAvailability).filter(models.HRAvailability.id == availability_id).first()
