@@ -217,9 +217,9 @@ const Index = () => {
     <DashboardLayout>
       <div className="p-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground">Offer Letters</h1>
+          <h1 className="text-3xl font-bold text-foreground">Availability Slots</h1>
           <p className="text-muted-foreground mt-1">
-            Create and manage offer letters for selected candidates
+            Create and manage your availabilities.
           </p>
         </div>
           {/* Main Content */}

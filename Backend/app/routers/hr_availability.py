@@ -11,7 +11,8 @@ from app.services.hr_availability import (
     get_availability,
     update_availability,
     delete_availability,
-    select_availability as select_avail
+    select_availability as select_avail,
+    get_selected_availability as selected_availability
 )
 
 # base url : http://127.0.0.1:8000/
@@ -41,6 +42,10 @@ def list_hr_availability(
     availabilities = get_availability(db, hr.id)
     # Return empty list if no availabilities exist (instead of 404)
     return availabilities
+
+@router.get("/selected/")
+def get_selected_availability(db: Session, hr: HRManager = Depends(get_current_hr)):
+    return selected_availability(db, hr.id)
 
 @router.put("/select/{availability_id}")
 def select_availability(availability_id: int, db: Session = Depends(get_db)):

@@ -13,7 +13,8 @@ from app.services.job import (
     update_job,
     delete_job,
     get_job_questions,
-    get_job_by_slug
+    get_job_by_slug, 
+    get_jobs_by_company
 )
 from app.core.security import get_current_hr
 
@@ -28,6 +29,11 @@ def create_job_endpoint(job: JobCreateWithFormCreate, db: Session = Depends(get_
         "job": new_job,
         "job_link": url
     }
+
+
+@router.get("/get-all")
+def get_jobs(db: Session = Depends(get_db), hr: HRManager = Depends(get_current_hr)):
+    return get_jobs_by_company(db, hr.company_id)
 
 @router.get("/{job_id}", dependencies=[Depends(get_current_hr)])
 def get_job_endpoint(job_id: int, db: Session = Depends(get_db)):

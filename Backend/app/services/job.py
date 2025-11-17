@@ -46,6 +46,8 @@ def create_job(db: Session, job_data: JobCreateWithFormCreate):
 def get_job(db: Session, job_id: int):
     return db.query(models.Job).filter(models.Job.job_id == job_id).first()
 
+def get_jobs_by_company(db: Session, company_id: int):
+    return db.query(models.Job).filter(models.Job.company_id == company_id).all()
 
 def get_job_questions(db: Session, job_id: int):
     return db.query(models.Question).join(models.QuestionsForm).filter(models.QuestionsForm.job_id == job_id).all()

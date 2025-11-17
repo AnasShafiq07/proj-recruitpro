@@ -14,7 +14,7 @@ class Company(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc))
 
     hrs: Mapped[list["HRManager"]] = relationship(back_populates="company")
-
+    jobs: Mapped[list["Job"]] = relationship(back_populates="job")
 
 class HRManager(Base):
     __tablename__ = "hr_manager"
@@ -139,6 +139,7 @@ class Job(Base):
 
     job_id: Mapped[int] = mapped_column(primary_key=True, index=True)
     hr_id: Mapped[int] = mapped_column(ForeignKey("hr_manager.id"))
+    company_id: Mapped[int] = mapped_column(ForeignKey("company.company_id"), nullable=True)
     department_id: Mapped[int] = mapped_column(ForeignKey("department.department_id"), nullable=True) 
     title: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=True)
@@ -153,6 +154,7 @@ class Job(Base):
     slug: Mapped[str] = mapped_column(String, unique=True, default=lambda: str(uuid.uuid4()))
 
     hr_manager: Mapped["HRManager"] = relationship(back_populates="jobs")
+    company: Mapped["Company"] = relationship(back_populates="jobs")
     department: Mapped["Department"] = relationship(back_populates="jobs") 
     question_form: Mapped["QuestionsForm"] = relationship(back_populates="job")
 
