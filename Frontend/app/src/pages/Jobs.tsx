@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Search, MapPin, Briefcase, Clock } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import DepartmentForm from "./Depatments";
+import { jobApi, type Job } from "@/services/jobApi";
+import type { Department } from "@/utils/types";
 
 // Mock data
 const jobCategories = [
@@ -19,79 +21,62 @@ const jobCategories = [
   { name: "QA Engineer", count: 4 },
 ];
 
-const mockJobListings = [
-  {
-    id: "1",
-    title: "Senior React Developer",
-    company: "TechCorp Solutions",
-    location: "Remote",
-    type: "Full-time",
-    salary: "$120k - $150k",
-    posted: "2 days ago",
-    urgent: true,
-  },
-  {
-    id: "2",
-    title: "Product Designer",
-    company: "Design Studio Inc",
-    location: "New York, NY",
-    type: "Full-time",
-    salary: "$90k - $120k",
-    posted: "5 days ago",
-  },
-  {
-    id: "3",
-    title: "Backend Engineer",
-    company: "CloudSystems",
-    location: "San Francisco, CA",
-    type: "Contract",
-    salary: "$140k - $180k",
-    posted: "1 week ago",
-  },
-  {
-    id: "4",
-    title: "DevOps Specialist",
-    company: "Infrastructure Ltd",
-    location: "Remote",
-    type: "Full-time",
-    salary: "$130k - $160k",
-    posted: "3 days ago",
-  },
-];
 
 const Jobs = () => {
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<Number>(null);
+  const [jobListing, setJobListing] = useState<Job[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  useEffect(() => {
+    const fetchJobs = async () => {
+      const data = await jobApi.getAll();
+      const data2 = await jobApi.getDepartments();
+      const jobsWithQuestionsForm: Job[] = data.map((job: any) => ({
+        ...job,
+      }));
+      setJobListing(jobsWithQuestionsForm);
+      setDepartments(data2);
+    };
+    fetchJobs();
+  }, []);
+
+  useEffect(()=> {
+    const fetchJobs = async () => {
+    if (selectedCategory !== null) {
+      let data = await jobApi.getJobsByDepartments(Number(selectedCategory))
+      setJobListing(data);
+    }
+  }
+  fetchJobs();
+  }, [selectedCategory])
+
 
   return (
     <DashboardLayout>
       <div className="p-8">
         <div className="mb-8 flex items-start justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-foreground mb-2">Job Postings</h1>
-            <p className="text-muted-foreground">Browse and manage all job listings</p>
+            <h1 className="text-3xl font-bold text-foreground mb-2">
+              Job Postings
+            </h1>
+            <p className="text-muted-foreground">
+              Browse and manage all job listings
+            </p>
           </div>
-        <div className="ml-auto">
-          <DepartmentForm />
+          <div className="ml-auto">
+            <DepartmentForm />
+          </div>
         </div>
-      </div>
-
 
         {/* Search Bar */}
         <div className="bg-card rounded-lg shadow-sm p-6 mb-8 border border-border">
           <div className="flex gap-4">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-              <Input
-                placeholder="Keywords"
-                className="pl-10 h-12"
-              />
+              <Input placeholder="Keywords" className="pl-10 h-12" />
             </div>
             <div className="flex-1 relative">
               <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-              <Input
-                placeholder="Location"
-                className="pl-10 h-12"
-              />
+              <Input placeholder="Location" className="pl-10 h-12" />
             </div>
             <Button className="h-12 px-8">
               <Search className="h-5 w-5" />
@@ -106,19 +91,18 @@ const Jobs = () => {
               <CardContent className="p-6">
                 <h3 className="font-semibold text-lg mb-4">Job Categories</h3>
                 <div className="space-y-2">
-                  {jobCategories.map((category) => (
+                  {departments.map((category) => (
                     <button
-                      key={category.name}
-                      onClick={() => setSelectedCategory(category.name)}
+                      key={category.department_name}
+                      onClick={() => setSelectedCategory(category.department_id)}
                       className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
-                        selectedCategory === category.name
+                        selectedCategory === category.department_id
                           ? "bg-primary text-primary-foreground"
                           : "hover:bg-secondary"
                       }`}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="text-sm">{category.name}</span>
-                        <span className="text-xs">({category.count})</span>
+                        <span className="text-sm">{category.department_name}</span>
                       </div>
                     </button>
                   ))}
@@ -131,12 +115,15 @@ const Jobs = () => {
           <div className="lg:col-span-3 space-y-4">
             <div className="flex items-center justify-between mb-4">
               <p className="text-sm text-muted-foreground">
-                {mockJobListings.length} jobs found
+                {jobListing.length} Jobs found
               </p>
             </div>
 
-            {mockJobListings.map((job) => (
-              <Card key={job.id} className="hover:shadow-lg transition-all duration-200">
+            {jobListing.map((job) => (
+              <Card
+                key={job.job_id}
+                className="hover:shadow-lg transition-all duration-200"
+              >
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1">
@@ -146,8 +133,7 @@ const Jobs = () => {
                           <Badge variant="destructive">URGENT</Badge>
                         )}
                       </div>
-                      <p className="text-muted-foreground mb-4">{job.company}</p>
-                      
+
                       <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                         <div className="flex items-center gap-1">
                           <MapPin className="h-4 w-4" />
@@ -155,18 +141,30 @@ const Jobs = () => {
                         </div>
                         <div className="flex items-center gap-1">
                           <Briefcase className="h-4 w-4" />
-                          <span>{job.type}</span>
+                          <span>{job.job_type}</span>
                         </div>
                         <div className="flex items-center gap-1">
                           <Clock className="h-4 w-4" />
-                          <span>{job.posted}</span>
+                          <span>
+                            Posted at:{" "}
+                            {job.created_at
+                              ? new Date(job.created_at).toLocaleDateString(
+                                  undefined,
+                                  {
+                                    year: "numeric",
+                                    month: "short",
+                                    day: "numeric",
+                                  }
+                                )
+                              : "Date N/A"}
+                          </span>
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="text-right">
                       <p className="font-semibold text-lg text-primary mb-2">
-                        {job.salary}
+                        Rs. {job.salary_range}K
                       </p>
                       <Button>View Details</Button>
                     </div>

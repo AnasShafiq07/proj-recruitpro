@@ -45,7 +45,7 @@ def get_linkedin_token(db: Session, hr_id: int):
     return db.query(LinkedInToken).filter_by(hr_id=hr_id).first()
 
 
-def create_linkedin_post(db: Session, hr_id: int, caption: str = Form(...), image: UploadFile = None):
+def create_linkedin_post(db: Session, apply_link:str, hr_id: int, caption: str = Form(...), image: UploadFile = None):
     token = get_linkedin_token(db, hr_id)
     if not token:
         raise HTTPException(status_code=401, detail="HR Manager not authenticated with LinkedIn")

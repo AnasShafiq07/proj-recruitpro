@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List
 
 from app.db.session import get_db
+from app.db.models import HRManager
 from app.core.security import get_current_hr
 
 from app.schemas.department import (
@@ -14,7 +15,7 @@ from app.schemas.department import (
 from app.services.department import (
     create_department,
     get_department,
-    get_departments,
+    get_departments as get_db_departments,
     update_department,
     delete_department,
 )
@@ -29,8 +30,10 @@ router = APIRouter(prefix="/departments", tags=["Departments"])
 )
 def create_department_endpoint(
     department: DepartmentCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    hr: HRManager = Depends(get_current_hr)
 ):
+    department.company_id = hr.company_id
     return create_department(db, department)
 
 
@@ -48,15 +51,9 @@ def get_department_endpoint(
     return db_department
 
 
-@router.get(
-    "/", 
-    dependencies=[Depends(get_current_hr)]
-)
-def get_all_departments_endpoint(
-    db: Session = Depends(get_db)
-):
-    return get_departments(db)
-
+@router.get("/get/all")
+def get_departments(db: Session = Depends(get_db), hr: HRManager = Depends(get_current_hr)):
+    return get_db_departments(db, hr.company_id)
 
 @router.put(
     "/{department_id}",

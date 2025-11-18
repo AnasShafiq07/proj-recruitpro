@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from typing import Optional
 
 
 class DepartmentBase(BaseModel):
@@ -6,6 +7,7 @@ class DepartmentBase(BaseModel):
 
 
 class DepartmentCreate(DepartmentBase):
+    company_id: Optional[int] = None
     pass
 
 

@@ -120,7 +120,7 @@ export const availabilityApi = {
     }
   },
 
-  // ✅ NEW: Select availability
+  // NEW: Select availability
   async select(availability_id: number): Promise<AvailabilityResponse> {
     const response = await fetch(
       `${API_BASE_URL}/availability/select/${availability_id}`,

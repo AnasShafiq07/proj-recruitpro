@@ -10,6 +10,7 @@ class JobBase(BaseModel):
     description: Optional[str] = None
     requirements: Optional[str] = None
     location: Optional[str] = None
+    job_type: Optional[str] = "Full-Time"
     salary_range: Optional[str] = None
     deadline: Optional[datetime] = None
     application_fee: Optional[float] = None
@@ -19,6 +20,7 @@ class JobBase(BaseModel):
 
 class JobCreate(JobBase):
     hr_id: Optional[int] = None
+    company_id : Optional[int] = None
 
 class JobCreateWithFormCreate(JobCreate):
     questions_form: Optional[QuestionsFormCreate] = None

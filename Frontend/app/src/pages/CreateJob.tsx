@@ -22,14 +22,15 @@ const CreateJob = () => {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [selectedDepartment, setSelectedDepartment] = useState("");
   const [jobTitle, setJobTitle] = useState("");
-
+  const [jobCreated, setJobCreated] = useState<boolean>(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [linkToShare, setLinkToShare] = useState("");
 
   useEffect(() => {
     const fetchDepartments = async () => {
       try {
-        const response = await fetch("http://127.0.0.1:8000/departments/", {
+
+        const response = await fetch("http://127.0.0.1:8000/departments/get/all", {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -75,7 +76,8 @@ const CreateJob = () => {
       title: formData.get("title") as string,
       description: (formData.get("description") as string) || undefined,
       requirements: (formData.get("skills") as string) || undefined,
-      location: (formData.get("jobType") as string) || undefined,
+      job_type: (formData.get("jobType") as string) || undefined,
+      location: (formData.get("location") as string) || undefined,
       salary_range: (formData.get("salary") as string) || undefined,
       deadline: deadline ? new Date(deadline).toISOString() : undefined,
       application_fee: formData.get("fees") ? Number(formData.get("fees")) : undefined,
@@ -106,13 +108,13 @@ const CreateJob = () => {
       }
 
       const resData = await response.json();
-      setLinkToShare("http://127.0.0.1:8000/apply/" + resData.job_link);
+      setLinkToShare("http://localhost:8082/apply/" + resData.job_link);
 
       toast({
         title: "Success!",
         description: "Job has been created successfully.",
       });
-
+      setJobCreated(true);
       setIsModalOpen(true);
     } catch (error: any) {
       toast({
@@ -233,6 +235,19 @@ const CreateJob = () => {
                   </div>
                 </div>
 
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="location" className="text-sm font-semibold">
+                    Job Location
+                  </Label>
+                  <Input
+                    id="location"
+                    name="location"
+                    placeholder="City name or Remote"
+                    className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
+                  />
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="skills" className="text-sm font-semibold">
                     Required Skills
@@ -244,7 +259,7 @@ const CreateJob = () => {
                     className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
-
+              </div>
                 <div className="grid md:grid-cols-3 gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="salary" className="text-sm font-semibold flex items-center gap-2">
@@ -368,35 +383,6 @@ const CreateJob = () => {
                 </div>
               </CardContent>
             </Card>
-
-            {/* LinkedIn Post Generator */}
-            <Card className="shadow-elegant border-border/50 hover:shadow-accent transition-all duration-300 animate-fade-in bg-gradient-to-br from-card to-accent/5">
-              <CardContent className="pt-6">
-                <div className="flex items-start gap-4">
-                  <div className="p-3 bg-gradient-accent rounded-lg shrink-0">
-                    <Sparkles className="h-6 w-6 text-accent-foreground" />
-                  </div>
-                  <div className="flex-1 space-y-3">
-                    <div>
-                      <h3 className="font-semibold text-lg">Share on LinkedIn</h3>
-                      <p className="text-muted-foreground text-sm">
-                        Generate an AI-powered post to attract top talent on LinkedIn
-                      </p>
-                    </div>
-                    <Button
-                      type="button"
-                      onClick={() => setShowLinkedInGenerator(true)}
-                      variant="outline"
-                      className="border-accent/30 hover:border-accent hover:bg-accent/10 text-accent hover:text-accent"
-                    >
-                      <Sparkles className="h-4 w-4 mr-2" />
-                      Generate LinkedIn Post
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
             {/* Action Buttons */}
             <div className="flex gap-4 justify-end pt-4">
               <Button
@@ -434,6 +420,36 @@ const CreateJob = () => {
             onClose={() => setIsModalOpen(false)}
             link={linkToShare}
           />
+          <div className="my-3">
+              {/* LinkedIn Post Generator */}
+            <Card className="shadow-elegant border-border/50 hover:shadow-accent transition-all duration-300 animate-fade-in bg-gradient-to-br from-card to-accent/5">
+              <CardContent className="pt-6">
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-gradient-accent rounded-lg shrink-0">
+                    <Sparkles className="h-6 w-6 text-accent-foreground" />
+                  </div>
+                  <div className="flex-1 space-y-3">
+                    <div>
+                      <h3 className="font-semibold text-lg">Share on LinkedIn</h3>
+                      <p className="text-muted-foreground text-sm">
+                        Generate an AI-powered post to attract top talent on LinkedIn
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      onClick={() => setShowLinkedInGenerator(true)}
+                      variant="outline"
+                      className="border-accent/30 hover:border-accent hover:bg-accent/10 text-accent hover:text-accent"
+                      disabled={!jobCreated}
+                    >
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      Generate LinkedIn Post
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </DashboardLayout>

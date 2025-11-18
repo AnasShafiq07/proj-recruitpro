@@ -5,7 +5,8 @@ from app.schemas.department import DepartmentCreate, DepartmentUpdate
 
 def create_department(db: Session, department_data: DepartmentCreate):
     db_department = models.Department(
-        department_name=department_data.department_name
+        department_name=department_data.department_name,
+        company_id = department_data.company_id
     )
     db.add(db_department)
     db.commit()
@@ -19,14 +20,11 @@ def get_department(db: Session, department_id: int):
     ).first()
 
 
-def get_departments(db: Session, skip: int = 0, limit: int = 100):
-    return (
-        db.query(models.Department)
-        .offset(skip)
-        .limit(limit)
-        .all()
-    )
+def get_department(db: Session, dept_id: int):
+    return db.query(models.Department).filter(models.Department.department_id == dept_id).first()
 
+def get_departments(db: Session, company_id: int):
+    return db.query(models.Department).filter(models.Department.company_id == company_id).all()
 
 def update_department(db: Session, department_id: int, department_data: DepartmentUpdate):
     db_department = get_department(db, department_id)

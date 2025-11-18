@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Calendar, Plus, Clock, Loader2 } from "lucide-react";
 import { availabilityApi } from "@/services/avalibilityApi";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { jobApi, type Job } from "../services/jobApi"
 
 interface Availability extends AvailabilityFormData {
   isSelected: boolean;
@@ -78,11 +79,14 @@ const Index = () => {
   // Fetch availabilities on mount
   useEffect(() => {
     fetchAvailabilities();
+  
   }, []);
 
   const fetchAvailabilities = async () => {
   try {
     setIsLoading(true);
+    let jobs:Job[] = await jobApi.getAll();
+    console.log("Interface Job", jobs);
     let data = await availabilityApi.getAll();
 
     // Normalize each item into the frontend shape

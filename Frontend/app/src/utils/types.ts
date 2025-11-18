@@ -2,10 +2,12 @@
 
 export type Department = {
   department_id: number;
+  company_id: number;
   department_name: string;
 };
 
 export type Job = {
+  job_id: number;
   department_id: number;
   title: string;
   description: string;
@@ -17,6 +19,9 @@ export type Job = {
   skills_weight: number;
   experience_weight: number;
   hr_id: number;
+  urgent: boolean;
+  job_type: string;
+  posted: string;
 
   questions_form: {
     questions: string[];

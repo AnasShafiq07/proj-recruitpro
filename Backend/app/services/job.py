@@ -7,8 +7,10 @@ from app.schemas.question import QuestionCreate
 
 def create_job(db: Session, job_data: JobCreateWithFormCreate):
     # create job
+    print(job_data.department_id)
     db_job: models.Job = models.Job(
         hr_id = job_data.hr_id,
+        company_id = job_data.company_id,
         department_id = job_data.department_id,
         title = job_data.title,
         description = job_data.description,
@@ -18,7 +20,8 @@ def create_job(db: Session, job_data: JobCreateWithFormCreate):
         deadline = job_data.deadline,
         application_fee = job_data.application_fee,
         skills_weight = job_data.skills_weight,
-        experience_weight = job_data.experience_weight
+        experience_weight = job_data.experience_weight,
+        job_type = job_data.job_type
     )
     db.add(db_job)
     db.commit()
@@ -57,6 +60,9 @@ def get_jobs(db: Session, skip: int = 0, limit: int = 100):
 
 def get_job_by_slug(db: Session, slug: str):
     return db.query(models.Job).filter(models.Job.slug == slug).first()
+
+def get_jobs_by_department(db: Session, dept_id: int):
+    return db.query(models.Job).filter(models.Job.department_id == dept_id).all()
 
 def update_job(db: Session, job_id: int, job_data: JobUpdateWithFormUpdate):
     db_job = get_job(db, job_id)
@@ -123,4 +129,7 @@ def delete_job(db: Session, job_id: int):
 
     return db_job
 
+
+
+# DEPARTMENTS
 

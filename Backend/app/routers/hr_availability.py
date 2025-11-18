@@ -44,7 +44,7 @@ def list_hr_availability(
     return availabilities
 
 @router.get("/selected/")
-def get_selected_availability(db: Session, hr: HRManager = Depends(get_current_hr)):
+def get_selected_availability(db: Session = Depends(get_db), hr: HRManager = Depends(get_current_hr)):
     return selected_availability(db, hr.id)
 
 @router.put("/select/{availability_id}")

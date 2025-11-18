@@ -14,7 +14,8 @@ class Company(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc))
 
     hrs: Mapped[list["HRManager"]] = relationship(back_populates="company")
-    jobs: Mapped[list["Job"]] = relationship(back_populates="job")
+    jobs: Mapped[list["Job"]] = relationship(back_populates="company")
+    departments: Mapped[list["Department"]] = relationship(back_populates="company")
 
 class HRManager(Base):
     __tablename__ = "hr_manager"
@@ -146,12 +147,14 @@ class Job(Base):
     requirements: Mapped[str] = mapped_column(Text, nullable=True)
     experience: Mapped[float] = mapped_column(Float, nullable=True)
     location: Mapped[str] = mapped_column(String, nullable=True)
+    job_type: Mapped[str] = mapped_column(String, nullable=True)
     salary_range: Mapped[str] = mapped_column(String, nullable=True)
     deadline: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     application_fee: Mapped[float] = mapped_column(Float, nullable=True)
     skills_weight: Mapped[float] = mapped_column(Float, nullable=True)
     experience_weight: Mapped[float] = mapped_column(Float, nullable=True)
     slug: Mapped[str] = mapped_column(String, unique=True, default=lambda: str(uuid.uuid4()))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc), nullable=True)
 
     hr_manager: Mapped["HRManager"] = relationship(back_populates="jobs")
     company: Mapped["Company"] = relationship(back_populates="jobs")
@@ -162,7 +165,11 @@ class Job(Base):
 class Department(Base):
     __tablename__ = "department"
     department_id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    company_id: Mapped[int] = mapped_column(ForeignKey("company.company_id"), nullable=True)
     department_name: Mapped[str] = mapped_column(String)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc), nullable=True)
+    
+    company: Mapped["Company"] = relationship(back_populates="departments")
     jobs: Mapped[List["Job"]] = relationship(back_populates="department")
 
 
