@@ -14,9 +14,9 @@ REDIRECT_URI = "http://localhost:8000/linkedin/auth/callback"
 router = APIRouter(prefix="/linkedin", tags=["Post Jobs to LinkedIn"])
 
 
-@router.get("/auth/login/{hr_id}")
-def login_linkedin(hr_id: int, db: Session = Depends(get_db)):
-    hr = db.query(HRManager).filter_by(id=hr_id).first()
+@router.get("/auth/login")
+def login_linkedin(db: Session = Depends(get_db), hr: HRManager = Depends(get_current_hr)):
+    #hr = db.query(HRManager).filter_by(id=hr_id).first()
     if not hr:
         raise HTTPException(status_code=404, detail="HR Manager not found")
 
@@ -25,9 +25,9 @@ def login_linkedin(hr_id: int, db: Session = Depends(get_db)):
         f"?response_type=code&client_id={CLIENT_ID}"
         f"&redirect_uri={REDIRECT_URI}"
         "&scope=openid%20profile%20email%20w_member_social%20w_organization_social%20rw_organization_admin"
-        f"&state={hr_id}"
+        f"&state={hr.id}"
     )
-    return RedirectResponse(linkedin_auth_url)
+    return {"redirect_url": linkedin_auth_url}
 
 
 @router.get("/auth/callback")
@@ -76,24 +76,20 @@ def auth_callback(request: Request, code: str = None, error: str = None, state: 
 
     token = create_or_update_linkedin_token(db=db, hr_id=hr_id, user_id=user_id,urn=f"urn:li:person:{user_id}", access_token=access_token, expires_in=expires_in)
 
-    return {
-        "message": "Login successful",
-        "hr_id": hr_id,
-        "name": name,
-        "email": email,
-        "expires_at": token.expires_at
-    }
+    #print(f"expries_at: {token.expires_at}")
+    return RedirectResponse(url="http://localhost:8082/settings", status_code=302)
 
-@router.get("/auth/status/{hr_id}")
-def auth_status(hr_id: int, db: Session = Depends(get_db)):
-    token = get_linkedin_token(db, hr_id)
+
+@router.get("/auth/status")
+def auth_status(db: Session = Depends(get_db), hr: HRManager = Depends(get_current_hr)):
+    token = get_linkedin_token(db, hr.id)
     if not token:
         return {"authenticated": False}
     return {
         "authenticated": True,
         "urn": token.urn,
         "expires_at": token.expires_at,
-        "hr_id": hr_id
+        "hr_id": hr.id
     }
 
 

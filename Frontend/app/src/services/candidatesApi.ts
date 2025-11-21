@@ -19,6 +19,7 @@ export interface Candidate {
   selected?: boolean;
   interview_scheduled?: boolean;
   created_at?: string | null;
+  meet_link?: string | null;
 }
 
 
@@ -86,6 +87,37 @@ export const candidateApi = {
         "Authorization": `Bearer ${localStorage.getItem("authToken")}`,
       },
       body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to update candidate ${candidate_id}`);
+    }
+
+    return await response.json();
+  },
+
+  async final_selection(candidate_id: number) {
+    const response = await fetch(`${API_BASE_URL}/select/${candidate_id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${localStorage.getItem("authToken")}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to update candidate ${candidate_id}`);
+    }
+
+    return await response.json();
+  },
+  async de_select(candidate_id: number) {
+    const response = await fetch(`${API_BASE_URL}/de-select/${candidate_id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${localStorage.getItem("authToken")}`,
+      },
     });
 
     if (!response.ok) {

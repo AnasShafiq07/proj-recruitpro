@@ -11,6 +11,7 @@ import type { Department } from "@/utils/types";
 import { useNavigate } from "react-router-dom";
 
 
+const API_BASE_URL = "http://127.0.0.1:8000";
 
 const Jobs = () => {
   const [selectedCategory, setSelectedCategory] = useState<Number>(null);
@@ -47,6 +48,7 @@ const Jobs = () => {
   useEffect(()=> {
     applyFilters();
   }, [selectedCategory])
+
 
   const applyFilters = () => {
     let filtered = [...allJobs];

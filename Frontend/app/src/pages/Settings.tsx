@@ -1,31 +1,44 @@
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { GoogleAccountCard } from "@/components/settings/GoogleAccountCard";
+import { LinkedInAccountCard } from "@/components/settings/LinkedInAccountCard";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Settings as SettingsIcon } from "lucide-react";
 
 const Settings = () => {
   return (
     <DashboardLayout>
-      <div className="p-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground">Settings</h1>
-          <p className="text-muted-foreground mt-1">
-            Manage your account and application preferences
-          </p>
-        </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <SettingsIcon className="h-5 w-5" />
-              Coming Soon
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+      <div className="min-h-screen bg-muted/30">
+        <div className="container mx-auto px-4 py-8 max-w-4xl">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-foreground mb-2">
+              Settings
+            </h1>
             <p className="text-muted-foreground">
-              Settings management features will be available soon.
+              Manage your account and application preferences
             </p>
-          </CardContent>
-        </Card>
+          </div>
+
+          <div className="space-y-6">
+            <Card className="border-border shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-xl">Account Integrations</CardTitle>
+                <CardDescription>
+                  Connect your accounts to enable advanced features like
+                  calendar scheduling and LinkedIn job postings
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <GoogleAccountCard />
+                <LinkedInAccountCard />
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     </DashboardLayout>
   );

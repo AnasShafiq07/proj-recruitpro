@@ -13,6 +13,9 @@ import { ShareModal } from "@/components/ui/modal";
 import { LinkedInPostPreview } from "@/components/jobs/LinkedInPostPreview";
 import type { Department } from "../utils/types";
 
+
+const API_BASE_URL = "http://127.0.0.1:8000";
+
 const CreateJob = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -26,6 +29,26 @@ const CreateJob = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [linkToShare, setLinkToShare] = useState("");
 
+  const [linkedinConnected, setLinkedinConnected] = useState<boolean>(false);
+  
+  
+    
+    const fetchLinkedInDetails = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/linkedin/auth/status`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          },
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setLinkedinConnected(data.authenticated);
+        }
+      } catch (error) {
+        console.error('Error fetching candidate:', error);
+      }
+    }
   useEffect(() => {
     const fetchDepartments = async () => {
       try {
@@ -52,7 +75,7 @@ const CreateJob = () => {
         });
       }
     };
-
+    fetchLinkedInDetails();
     fetchDepartments();
   }, []);
 
@@ -440,10 +463,10 @@ const CreateJob = () => {
                       onClick={() => setShowLinkedInGenerator(true)}
                       variant="outline"
                       className="border-accent/30 hover:border-accent hover:bg-accent/10 text-accent hover:text-accent"
-                      disabled={!jobCreated}
+                      disabled={!jobCreated || !linkedinConnected}
                     >
                       <Sparkles className="h-4 w-4 mr-2" />
-                      Generate LinkedIn Post
+                      { linkedinConnected ? "Generate LinkedIn Post" : "LinkedIn not connected" }
                     </Button>
                   </div>
                 </div>

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Mail, Phone, MapPin, FileText, Clock, CheckCircle, XCircle, Award, Briefcase, GraduationCap, Download } from 'lucide-react';
+import { Calendar, Mail, Phone, MapPin, FileText, Clock, CheckCircle, XCircle, Award, Briefcase, GraduationCap, Download, Link } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 
 const API_BASE_URL = "http://127.0.0.1:8000";
 
 const CandidateView = () => {
+  const [googleAuthenticated, setGoogleAuthenticated] = useState<boolean>(false);
   const [candidate, setCandidate] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
@@ -26,8 +27,25 @@ const CandidateView = () => {
     const urlParams = new URLSearchParams(window.location.search);
     const candidateId = urlParams.get('candidate') || '1';
     fetchCandidateDetails(candidateId);
+    fetchGoogleDetails();
   }, []);
 
+  const fetchGoogleDetails  = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/google/auth/status`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+        },
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setGoogleAuthenticated(data.authenticated);
+      }
+    } catch (error) {
+      console.error('Error fetching candidate:', error);
+    }
+  }
   const fetchCandidateDetails = async (id) => {
     try {
       const response = await fetch(`${API_BASE_URL}/candidates/${id}`, {
@@ -62,6 +80,7 @@ const CandidateView = () => {
           'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
         },
         body: JSON.stringify({
+          candidate_id: candidate.candidate_id,
           job_id: candidate.job_id,
           email: candidate.email,
           summary: interviewForm.summary,
@@ -153,7 +172,7 @@ const CandidateView = () => {
       setShowResumeModal(true);
     } catch (err) {
       console.error('Error opening resume:', err);
-      alert(err.message || 'Failed to open resume');
+      alert("Resume not available.");
     }
   };
 
@@ -178,7 +197,7 @@ const CandidateView = () => {
       }, 1500);
     } catch (err) {
       console.error('Error downloading resume:', err);
-      alert(err.message || 'Failed to download resume');
+      alert("Resume not available.");
     }
   };
 
@@ -313,11 +332,12 @@ const CandidateView = () => {
               <h3 className="text-lg font-bold text-gray-900 mb-4">Actions</h3>
               <div className="space-y-3">
                 <button
+                  disabled={!googleAuthenticated}
                   onClick={() => setShowScheduleModal(true)}
                   className="w-full flex items-center justify-center px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
                 >
                   <Calendar className="w-5 h-5 mr-2" />
-                  Schedule Interview
+                  {googleAuthenticated === true ? "Schedule Interview" : "Google account not connected"}
                 </button>
                 
                 <button
@@ -358,7 +378,23 @@ const CandidateView = () => {
                     {candidate.interview_scheduled ? <CheckCircle className="w-6 h-6" /> : <Clock className="w-6 h-6" />}
                   </span>
                 </div>
-
+                {candidate.meet_link && (
+                                <div className="flex flex-col border-t pt-4">
+                                    <span className="text-gray-700 flex items-center mb-2">
+                                        <Link className="w-4 h-4 mr-2 text-blue-600" />
+                                        Meeting Link:
+                                    </span>
+                                    <a 
+                                        href={candidate.meet_link} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                        className="text-sm text-blue-600 truncate hover:underline"
+                                        title={candidate.meet_link}
+                                    >
+                                        {candidate.meet_link}
+                                    </a>
+                                </div>
+                            )}
                 <div className="flex items-center justify-between">
                   <span className="text-gray-700">Final Selection</span>
                   <button

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, RefreshCw, Send, Sparkles } from "lucide-react";
@@ -14,6 +14,8 @@ interface GeneratedPost {
   image: string;
   caption: string;
 }
+
+const API_BASE_URL = "http://127.0.0.1:8000";
 
 export const LinkedInPostPreview = ({ jobTitle, onClose }: LinkedInPostPreviewProps) => {
   const { toast } = useToast();

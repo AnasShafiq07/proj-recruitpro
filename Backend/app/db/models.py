@@ -213,6 +213,7 @@ class Candidate(Base):
     interview_scheduled: Mapped[bool] = mapped_column(Boolean, default=False,nullable=True)
     selected: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
     ai_score: Mapped[int] = mapped_column(Integer, default=0,nullable=True)
+    meet_link: Mapped[str] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc), nullable=True)
     notifications: Mapped[list["Notification"]] = relationship(back_populates="candidate")
     answers: Mapped[list["Answer"]] = relationship(back_populates="candidate", cascade="all, delete-orphan")

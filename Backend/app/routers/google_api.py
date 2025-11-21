@@ -6,12 +6,12 @@ from datetime import datetime, timedelta, timezone
 import uuid, requests, os
 from email.mime.text import MIMEText
 from app.db.session import get_db
-from app.db.models import HRManager, HRAvailability, Candidate
+from app.db.models import HRManager, HRAvailability, Candidate, GoogleToken
 from app.services.google_calendar import create_or_update_google_token, get_google_token, delete_google_token
 from app.services.hr_manager import get_hr_manager
 from app.schemas.google import EventCreate, EmailPayload, SchedulingDetails
 from app.core.security import get_current_hr
-
+from app.services.candidate import schedule_interview, update_meet_link
 from app.services.hr_availability import get_availability
 import json
 from app.services.candidate import get_candidates_without_interview
@@ -34,39 +34,48 @@ SCOPES = "openid email profile https://www.googleapis.com/auth/calendar https://
 
 
 
-
-def refresh_google_token(db: Session, hr_id: int, token):
-    print("Refreshing access token")
+def refresh_google_token(db: Session, hr_id: int, token: GoogleToken):
+    print("Refreshing access token", token.refresh_token)
     token_url = "https://oauth2.googleapis.com/token"
+    old_refresh_token = token.refresh_token
+    old_user_id = token.user_id
+
+    delete_google_token(db, hr_id)
 
     data = {
         "client_id": CLIENT_ID,
         "client_secret": CLIENT_SECRET,
-        "refresh_token": token.refresh_token,
+        "refresh_token": old_refresh_token,
         "grant_type": "refresh_token"
     }
+
     resp = requests.post(token_url, data=data)
     if resp.status_code != 200:
         raise HTTPException(status_code=resp.status_code, detail=resp.json())
 
     token_data = resp.json()
+
     new_access_token = token_data["access_token"]
     expires_in = token_data["expires_in"]
 
+    # Create a new token row
     updated_token = create_or_update_google_token(
         db=db,
         hr_id=hr_id,
-        user_id=token.user_id,
+        user_id=old_user_id,
         access_token=new_access_token,
-        refresh_token=token.refresh_token,
+        refresh_token=old_refresh_token,
         expires_in=expires_in
     )
+
     return updated_token
 
 
-def get_valid_token(db: Session, hr_id: int):
-    token = get_google_token(db, hr_id)
 
+def get_valid_token(db: Session, hr_id: int):
+    token: GoogleToken = get_google_token(db, hr_id)
+    print(token.access_token)
+    print(token.expires_at)
     if not token:
         raise HTTPException(status_code=401, detail="Not authenticated with google")
     if token.expires_at <= datetime.now(timezone.utc):
@@ -74,15 +83,15 @@ def get_valid_token(db: Session, hr_id: int):
     return token
 
 
-@router.get("/auth/login/{hr_id}")
-def login_google(hr_id: int, db: Session = Depends(get_db)):
-    hr = get_hr_manager(db, hr_id)
+@router.get("/auth/login")
+def login_google(db: Session = Depends(get_db), hr: HRManager = Depends(get_current_hr)):
+    #hr = get_hr_manager(db, hr_id)
     if not hr:
         raise HTTPException(status_code=404, detail="HR Manager not found")
     
-    token = get_google_token(db, hr_id)
+    token = get_google_token(db, hr.id)
     if token:
-        delete_google_token(db, hr_id)
+        delete_google_token(db, hr.id)
 
     
     google_auth_url = (
@@ -91,10 +100,9 @@ def login_google(hr_id: int, db: Session = Depends(get_db)):
         f"&redirect_uri={REDIRECT_URI}"
         f"&scope={SCOPES}"
         f"&access_type=offline&prompt=consent"
-        f"&state={hr_id}"
+        f"&state={hr.id}"
     )
-    return RedirectResponse(google_auth_url)
-
+    return {"redirect_url": google_auth_url}
 
 @router.get("/auth/callback")
 def auth_callback(request: Request, code: str = None, error: str = None, state: int = None, db: Session = Depends(get_db)):
@@ -144,18 +152,12 @@ def auth_callback(request: Request, code: str = None, error: str = None, state: 
         refresh_token=refresh_token,
         expires_in=expires_in
     )
-
-    return {
-        "message": "Google login successful",
-        "hr_id": hr_id,
-        "name": name,
-        "email": email,
-        "expires_at": token.expires_at
-    }
+    #print(f"expires_at: {token.expires_at}")
+    return RedirectResponse(url="http://localhost:8082/settings", status_code=302)
 
 @router.get("/auth/status")
 def auth_status(db: Session = Depends(get_db), hr: HRManager = Depends(get_current_hr)):
-    token = get_google_token(db, hr.id)
+    token = get_valid_token(db, hr.id)
     if not token or token.expires_at <= datetime.now(timezone.utc):
         return {"authenticated": False}
         
@@ -202,6 +204,8 @@ def create_event(event_data: EventCreate, db: Session = Depends(get_db), hr: HRM
         raise HTTPException(status_code=create_resp.status_code, detail=create_resp.json())
 
     created_event = create_resp.json()   
+    schedule_interview(db, event_data.candidate_id)
+    update_meet_link(db, event_data.candidate_id, created_event.get("hangoutLink")) 
     return {
         "eventId": created_event["id"],
         "meetLink": created_event.get("hangoutLink"),

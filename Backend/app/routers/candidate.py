@@ -17,7 +17,8 @@ from app.services.candidate import (
     select_candi,
     get_selected_for_interview,
     get_selected_candi,
-    get_all_candidates_by_job
+    get_all_candidates_by_job,
+    deselect_candi
 )
 from app.services.job import increment_applicants
 from app.services.payment import create_stripe_payment_intent, create_payment_record
@@ -61,7 +62,7 @@ def create_candidate_endpoint(
         return {"candidate": db_candidate, "payment": None}
 
 
-@router.get("/{candidate_id}", response_model=CandidateOut)
+@router.get("/{candidate_id}")
 def get_candidate_endpoint(candidate_id: int, db: Session = Depends(get_db)):
     db_candidate = get_candidate(db, candidate_id)
     if not db_candidate:
@@ -69,12 +70,20 @@ def get_candidate_endpoint(candidate_id: int, db: Session = Depends(get_db)):
     return db_candidate
 
 
-@router.post("/select/{candidate_id}")
+@router.put("/select/{candidate_id}")
 def select_candidate(candidate_id: int, db: Session = Depends(get_db)):
     candidate = get_candidate(db, candidate_id)
     if not candidate or candidate.selected_for_interview == False:
         raise HTTPException(status_code=404, detail="Candidate not present or have not given interview")    
     select_candi(db, candidate_id)
+    return True    
+
+@router.put("/de-select/{candidate_id}")
+def select_candidate(candidate_id: int, db: Session = Depends(get_db)):
+    candidate = get_candidate(db, candidate_id)
+    if not candidate or candidate.selected_for_interview == False:
+        raise HTTPException(status_code=404, detail="Candidate not present or have not given interview")    
+    deselect_candi(db, candidate_id)
     return True    
 
 @router.get("/")

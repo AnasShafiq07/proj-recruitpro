@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import Optional
 
 class EventCreate(BaseModel):
+    candidate_id: int
     job_id: int
     email: EmailStr 
     summary: Optional[str] = "Job Meeting"

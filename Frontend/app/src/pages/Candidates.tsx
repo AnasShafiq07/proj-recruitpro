@@ -24,12 +24,17 @@ const getStatusColor = (status: boolean) => {
     
 };
 
+interface Selected {
+  id:number;
+  selected: boolean;
+}
+
 const Candidates = () => {
   const navigate = useNavigate();
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [searchParams] = useSearchParams();
   const [jobId, setJobId] = useState<String>();
-
+  const [currSelected, setSelected] = useState<Selected>();
 
   useEffect(() => {
     const paramValue = searchParams.get("job");
@@ -50,6 +55,51 @@ const Candidates = () => {
 
     fetchCandidates();
   }, [searchParams]);
+
+  const selectCandidate = async (cand_id: number) => {
+    // Optimistically update UI immediately
+    setCandidates(prev =>
+      prev.map(c =>
+        c.candidate_id === cand_id ? { ...c, selected: true } : c
+      )
+    );
+    
+    try {
+      await candidateApi.final_selection(cand_id);
+      setSelected({ id: cand_id, selected: true });
+    } catch (error) {
+      console.error("Error selecting candidate:", error);
+      // Revert on error
+      setCandidates(prev =>
+        prev.map(c =>
+          c.candidate_id === cand_id ? { ...c, selected: false } : c
+        )
+      );
+    }
+  };
+
+  const deSelectCandidate = async (cand_id: number) => {
+    // Optimistically update UI immediately
+    setCandidates(prev =>
+      prev.map(c =>
+        c.candidate_id === cand_id ? { ...c, selected: false } : c
+      )
+    );
+    
+    try {
+      await candidateApi.de_select(cand_id);
+      setSelected({ id: cand_id, selected: false });
+    } catch (error) {
+      console.error("Error deselecting candidate:", error);
+      // Revert on error
+      setCandidates(prev =>
+        prev.map(c =>
+          c.candidate_id === cand_id ? { ...c, selected: true } : c
+        )
+      );
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="p-8">
@@ -128,7 +178,7 @@ const Candidates = () => {
                   </TableCell>
                   <TableCell>
                     <Badge className={getStatusColor(candidate.selected_for_interview)}>
-                      {candidate.selected_for_interview === true ? "Selected": "Pending"}
+                      {candidate.selected === true ? "Selected": "Pending"}
                     </Badge>
                   </TableCell>
                   <TableCell>{candidate.interview_scheduled === true ? "Scheduled": "Pending"}</TableCell>
@@ -140,7 +190,11 @@ const Candidates = () => {
                       <Button size="sm" variant="outline" onClick={()=> navigate(`/candidates/view?candidate=${candidate.candidate_id}`)}>
                         View
                       </Button>
-                      <Button size="sm">Select</Button>
+                      <Button size="sm" onClick={()=> {if (candidate.selected === true)
+                        deSelectCandidate(candidate.candidate_id)
+                      else
+                        selectCandidate(candidate.candidate_id)
+                      }}>{candidate.selected === true ? "Selected" : "Select"}</Button>
                     </div>
                   </TableCell>
                 </TableRow>

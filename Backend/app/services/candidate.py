@@ -70,6 +70,24 @@ def select_for_interview(db: Session, candidate_id: int):
     db.refresh(db_candidate)
     return db_candidate
 
+def schedule_interview(db: Session, candidate_id: int):
+    db_candidate = get_candidate(db, candidate_id)
+    if not db_candidate:
+        return None
+    db_candidate.interview_scheduled = True
+    db.commit()
+    db.refresh(db_candidate)
+    return db_candidate
+
+def update_meet_link(db: Session, candidate_id: int, link: str):
+    db_candidate = get_candidate(db, candidate_id)
+    if not db_candidate:
+        return None
+    db_candidate.meet_link = link
+    db.commit()
+    db.refresh(db_candidate)
+    return db_candidate
+
 def get_selected_for_interview(db: Session, job_id: int):
     candidates = db.query(models.Candidate).filter(models.Candidate.job_id == job_id).filter(models.Candidate.selected_for_interview == True).all()
     return candidates
@@ -86,6 +104,15 @@ def select_candi(db: Session, candidate_id: int):
     if not db_candidate:
         return None
     db_candidate.selected = True
+    db.commit()
+    db.refresh(db_candidate)
+    return db_candidate
+
+def deselect_candi(db: Session, candidate_id: int):
+    db_candidate = get_candidate(db, candidate_id)
+    if not db_candidate:
+        return None
+    db_candidate.selected = False
     db.commit()
     db.refresh(db_candidate)
     return db_candidate
