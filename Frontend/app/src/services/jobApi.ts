@@ -22,7 +22,8 @@ export interface Job {
   salary_range: string;
 
   application_fee: number;
-
+  applicants: number;
+  selected: number;
   deadline: string; // from backend: "2025-11-27T05:00:00"
   urgent?: boolean;
   created_at?: string;

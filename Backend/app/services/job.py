@@ -44,7 +44,27 @@ def create_job(db: Session, job_data: JobCreateWithFormCreate):
 
     return db_job
 
+def increment_applicants(db: Session, job_id: int):
+    job = db.query(models.Job).filter(models.Job.job_id == job_id).first()
+    if not job: return None
+    if not job.applicants:
+        job.applicants = 1
+    else:
+        job.applicants = job.applicants + 1
+    db.commit()
+    db.refresh(job)
+    return job
 
+def increment_selected(db: Session, job_id: int):
+    job = db.query(models.Job).filter(models.Job.job_id == job_id).first()
+    if not job: return None
+    if not job.selected:
+        job.selected = 1
+    else:
+        job.selected = job.selected + 1
+    db.commit()
+    db.refresh(job)
+    return job
 
 def get_job(db: Session, job_id: int):
     return db.query(models.Job).filter(models.Job.job_id == job_id).first()

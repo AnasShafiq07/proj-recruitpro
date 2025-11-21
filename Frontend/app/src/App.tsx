@@ -16,6 +16,7 @@ import Internal from "./pages/Internal";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import ApplyJob from "./pages/ApplyJob";
+import CandidateView from "./pages/CandidateView";
 
 const queryClient = new QueryClient();
 
@@ -33,6 +34,7 @@ const App = () => (
           <Route path="/jobs/create" element={<CreateJob />} />
           <Route path="/department" element={<DepartmentForm />}/>
           <Route path="/candidates" element={<Candidates />} />
+          <Route path="/candidates/view" element={<CandidateView />}/>
           <Route path="/schedule" element={<Schedule />} />
           <Route path="/offers" element={<Offers />} />
           <Route path="/internal" element={<Internal />} />

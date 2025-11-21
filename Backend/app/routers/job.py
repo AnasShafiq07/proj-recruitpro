@@ -41,6 +41,12 @@ def get_jobs(db: Session = Depends(get_db), hr: HRManager = Depends(get_current_
         for job in jobs:
             if not job.created_at:
                 job.created_at = datetime.now(timezone.utc)
+            if not job.applicants:
+                job.applicants = 0
+            if not job.selected:
+                job.selected = 0
+            if not job.job_type:
+                job.job_type = "Full Time"
     return jobs
 
 @router.get("/by-dept/{dept_id}")

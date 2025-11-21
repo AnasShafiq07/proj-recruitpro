@@ -8,24 +8,18 @@ import { Card, CardContent } from "@/components/ui/card";
 import DepartmentForm from "./Depatments";
 import { jobApi, type Job } from "@/services/jobApi";
 import type { Department } from "@/utils/types";
+import { useNavigate } from "react-router-dom";
 
-// Mock data
-const jobCategories = [
-  { name: "Frontend Developer", count: 8 },
-  { name: "Backend Developer", count: 12 },
-  { name: "Full Stack Developer", count: 6 },
-  { name: "UI/UX Designer", count: 4 },
-  { name: "Product Manager", count: 3 },
-  { name: "Data Analyst", count: 5 },
-  { name: "DevOps Engineer", count: 7 },
-  { name: "QA Engineer", count: 4 },
-];
 
 
 const Jobs = () => {
   const [selectedCategory, setSelectedCategory] = useState<Number>(null);
   const [jobListing, setJobListing] = useState<Job[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [allJobs, setAllJobs] = useState<Job[]>([]);
+  const [keyword, setKeyword] = useState("");
+  const [locationFilter, setLocationFilter] = useState("");
+  const navigate = useNavigate();
   useEffect(() => {
     const fetchJobs = async () => {
       const data = await jobApi.getAll();
@@ -33,6 +27,7 @@ const Jobs = () => {
       const jobsWithQuestionsForm: Job[] = data.map((job: any) => ({
         ...job,
       }));
+      setAllJobs(jobsWithQuestionsForm);
       setJobListing(jobsWithQuestionsForm);
       setDepartments(data2);
     };
@@ -49,7 +44,30 @@ const Jobs = () => {
   fetchJobs();
   }, [selectedCategory])
 
+  useEffect(()=> {
+    applyFilters();
+  }, [selectedCategory])
 
+  const applyFilters = () => {
+    let filtered = [...allJobs];
+    if (keyword.trim() !== "") {
+      filtered = filtered.filter(job => 
+        job.title.toLowerCase().includes(keyword.toLowerCase()) || 
+        job.description.toLowerCase().includes(keyword.toLowerCase())
+      );
+    }
+
+    if (locationFilter.trim() !== "") {
+      filtered = filtered.filter(job => job.location.toLowerCase().includes(locationFilter.toLowerCase()));
+    }
+
+    if (selectedCategory !== null) {
+      filtered = filtered.filter(job => job.department_id === Number(selectedCategory))
+    }
+
+    setJobListing(filtered);
+
+  }
   return (
     <DashboardLayout>
       <div className="p-8">
@@ -72,13 +90,17 @@ const Jobs = () => {
           <div className="flex gap-4">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-              <Input placeholder="Keywords" className="pl-10 h-12" />
+              <Input placeholder="Keywords" className="pl-10 h-12"
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)} />
             </div>
             <div className="flex-1 relative">
               <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-              <Input placeholder="Location" className="pl-10 h-12" />
+              <Input placeholder="Location" className="pl-10 h-12"
+              value={locationFilter}
+  onChange={(e) => setLocationFilter(e.target.value)} />
             </div>
-            <Button className="h-12 px-8">
+            <Button className="h-12 px-8" onClick={applyFilters}>
               <Search className="h-5 w-5" />
             </Button>
           </div>
@@ -166,7 +188,7 @@ const Jobs = () => {
                       <p className="font-semibold text-lg text-primary mb-2">
                         Rs. {job.salary_range}K
                       </p>
-                      <Button>View Details</Button>
+                      <Button onClick={()=> navigate(`/candidates?job=${job.job_id}`)}>View Candidates</Button>
                     </div>
                   </div>
                 </CardContent>

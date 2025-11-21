@@ -16,9 +16,10 @@ from app.services.candidate import (
     delete_candidate,
     select_candi,
     get_selected_for_interview,
-    get_selected_candi
+    get_selected_candi,
+    get_all_candidates_by_job
 )
-
+from app.services.job import increment_applicants
 from app.services.payment import create_stripe_payment_intent, create_payment_record
 from app.db import models
 
@@ -31,7 +32,7 @@ def create_candidate_endpoint(
 ):
     # Create candidate (prescreen + CV first)
     db_candidate = create_candidate(db, candidate)
-
+    increment_applicants(db, candidate.job_id)
     # Check if job has an application fee
     job = db.query(models.Job).filter(models.Job.job_id == candidate.job_id).first()
     if not job:
@@ -80,6 +81,15 @@ def select_candidate(candidate_id: int, db: Session = Depends(get_db)):
 def get_all_candidates(db: Session = Depends(get_db)):
     return get_candidates(db)
 
+@router.get("/by-job/{job_id}")
+def get_candidates_by_job(job_id: int, db: Session = Depends(get_db)):
+    candidates = get_all_candidates_by_job(db, job_id)
+    if not candidates:
+        raise HTTPException(status_code=404, detail="Job id not present.")
+    for cand in candidates:
+        if not cand.ai_score:
+            cand.ai_score = 0
+    return candidates 
 
 @router.put("/{candidate_id}", response_model=CandidateOut)
 def update_candidate_endpoint(
@@ -99,19 +109,17 @@ def delete_candidate_endpoint(candidate_id: int, db: Session = Depends(get_db)):
     return None
 
 
-@router.get("/filter/selected-for-interview")
-def get_candidates_selected_for_interview(db: Session = Depends(get_db)):
-    # return get_selected_for_interview(db)
-    candiadates = get_selected_for_interview(db)
-    return {
-        "candidates": candiadates,
-        "length": len(candiadates)
-    }
+@router.get("/filter/selected-for-interview/{job_id}")
+def get_candidates_selected_for_interview(job_id: int, db: Session = Depends(get_db)):
+    print(job_id)
+    candidates = get_all_candidates_by_job(db, job_id)
+    #candidates = get_selected_for_interview(db, job_id)
+    return candidates
 
 
-@router.get("/filter/selected-candidates")
-def get_selected_candidates(db: Session = Depends(get_db)):
-    candidates = get_selected_candi(db)
+@router.get("/filter/selected-candidates/{job_id}")
+def get_selected_candidates(job_id: int, db: Session = Depends(get_db)):
+    candidates = get_selected_candi(db, job_id)
     return {
         "candidates": candidates,
         "length": len(candidates)

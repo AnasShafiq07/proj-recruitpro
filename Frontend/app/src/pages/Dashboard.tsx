@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { JobCard } from "@/components/jobs/JobCard";
 import { Button } from "@/components/ui/button";
 import DepartmentForm from "./Depatments";
 import { Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { jobApi, type Job } from "@/services/jobApi";
+
 
 // Mock data
 const mockJobs = [
@@ -73,8 +75,18 @@ const mockJobs = [
 ];
 
 const Dashboard = () => {
+  const [jobListing, setJobListing] = useState<Job[]>([]);
   const navigate = useNavigate();
 
+
+  useEffect(() => {
+      const fetchJobs = async () => {
+        const data: Job[] = await jobApi.getAll();
+        setJobListing(data);
+      };
+      fetchJobs();
+    }, []);
+    
   return (
     <DashboardLayout>
       <div className="p-8">
@@ -97,11 +109,11 @@ const Dashboard = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {mockJobs.map((job) => (
+          {jobListing.map((job) => (
             <JobCard
-              key={job.id}
-              {...job}
-              onClick={() => navigate(`/candidates?job=${job.id}`)}
+              key={job.job_id}
+              job={job}
+              onClick={() => navigate(`/candidates?job=${job.job_id}`)}
             />
           ))}
         </div>

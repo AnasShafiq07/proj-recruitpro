@@ -10,81 +10,46 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { type Candidate, candidateApi } from "@/services/candidatesApi";
 import { Search, Download, Filter } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
-// Mock data
-const mockCandidates = [
-  {
-    id: "1",
-    name: "John Smith",
-    email: "john.smith@email.com",
-    phone: "+1 (555) 123-4567",
-    position: "Senior Frontend Developer",
-    score: 92,
-    status: "Selected",
-    appliedDate: "2024-01-15",
-    interviewStatus: "Scheduled",
-  },
-  {
-    id: "2",
-    name: "Sarah Johnson",
-    email: "sarah.j@email.com",
-    phone: "+1 (555) 234-5678",
-    position: "Product Manager",
-    score: 88,
-    status: "Interview",
-    appliedDate: "2024-01-14",
-    interviewStatus: "Pending",
-  },
-  {
-    id: "3",
-    name: "Michael Chen",
-    email: "m.chen@email.com",
-    phone: "+1 (555) 345-6789",
-    position: "UX Designer",
-    score: 95,
-    status: "Selected",
-    appliedDate: "2024-01-12",
-    interviewStatus: "Completed",
-  },
-  {
-    id: "4",
-    name: "Emily Davis",
-    email: "emily.davis@email.com",
-    phone: "+1 (555) 456-7890",
-    position: "Backend Engineer",
-    score: 85,
-    status: "Review",
-    appliedDate: "2024-01-10",
-    interviewStatus: "Pending",
-  },
-  {
-    id: "5",
-    name: "David Wilson",
-    email: "d.wilson@email.com",
-    phone: "+1 (555) 567-8901",
-    position: "Data Analyst",
-    score: 90,
-    status: "Selected",
-    appliedDate: "2024-01-08",
-    interviewStatus: "Scheduled",
-  },
-];
-
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case "Selected":
-      return "bg-accent text-accent-foreground";
-    case "Interview":
-      return "bg-primary text-primary-foreground";
-    case "Review":
-      return "bg-secondary text-secondary-foreground";
-    default:
-      return "bg-muted text-muted-foreground";
-  }
+const getStatusColor = (status: boolean) => {
+  if (status === true)
+    return "bg-accent text-accent-foreground";
+  else
+    return "bg-primary text-primary-foreground";
+    
 };
 
 const Candidates = () => {
+  const navigate = useNavigate();
+  const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [searchParams] = useSearchParams();
+  const [jobId, setJobId] = useState<String>();
+
+
+  useEffect(() => {
+    const paramValue = searchParams.get("job");
+
+    if (!paramValue) return;
+
+    const numId = Number(paramValue);
+    setJobId(paramValue);
+
+    const fetchCandidates = async () => {
+      try {
+        const data = await candidateApi.getByJob(numId);
+        setCandidates(data);
+      } catch (err) {
+        console.error("Failed to fetch candidates:", err);
+      }
+    };
+
+    fetchCandidates();
+  }, [searchParams]);
   return (
     <DashboardLayout>
       <div className="p-8">
@@ -125,7 +90,7 @@ const Candidates = () => {
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Contact</TableHead>
-                <TableHead>Position</TableHead>
+                <TableHead>Education</TableHead>
                 <TableHead>Score</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Interview</TableHead>
@@ -134,42 +99,48 @@ const Candidates = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {mockCandidates.map((candidate) => (
-                <TableRow key={candidate.id}>
-                  <TableCell className="font-medium">{candidate.name}</TableCell>
+              {candidates.map((candidate) => (
+                <TableRow key={candidate.candidate_id}>
+                  <TableCell className="font-medium">
+                    {candidate.name}
+                  </TableCell>
                   <TableCell>
                     <div className="text-sm">
                       <div>{candidate.email}</div>
-                      <div className="text-muted-foreground">{candidate.phone}</div>
+                      <div className="text-muted-foreground">
+                        {candidate.phone}
+                      </div>
                     </div>
                   </TableCell>
-                  <TableCell>{candidate.position}</TableCell>
+                  <TableCell>{candidate.education}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <div className="w-12 h-2 bg-secondary rounded-full overflow-hidden">
                         <div
                           className="h-full bg-accent"
-                          style={{ width: `${candidate.score}%` }}
+                          style={{ width: `${candidate.ai_score || 0}%` }}
                         />
                       </div>
-                      <span className="text-sm font-medium">{candidate.score}</span>
+                      <span className="text-sm font-medium">
+                        {candidate.ai_score || 0}
+                      </span>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge className={getStatusColor(candidate.status)}>
-                      {candidate.status}
+                    <Badge className={getStatusColor(candidate.selected_for_interview)}>
+                      {candidate.selected_for_interview === true ? "Selected": "Pending"}
                     </Badge>
                   </TableCell>
-                  <TableCell>{candidate.interviewStatus}</TableCell>
+                  <TableCell>{candidate.interview_scheduled === true ? "Scheduled": "Pending"}</TableCell>
                   <TableCell className="text-muted-foreground">
-                    {new Date(candidate.appliedDate).toLocaleDateString()}
+                    {new Date(candidate.created_at ?? new Date()).toLocaleDateString()}
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-2">
-                      <Button size="sm" variant="outline">
+                      <Button size="sm" variant="outline" onClick={()=> navigate(`/candidates/view?candidate=${candidate.candidate_id}`)}>
                         View
                       </Button>
-                      <Button size="sm">Contact</Button>
+                      <Button size="sm">Select</Button>
                     </div>
                   </TableCell>
                 </TableRow>

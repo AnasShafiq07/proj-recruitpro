@@ -153,6 +153,8 @@ class Job(Base):
     application_fee: Mapped[float] = mapped_column(Float, nullable=True)
     skills_weight: Mapped[float] = mapped_column(Float, nullable=True)
     experience_weight: Mapped[float] = mapped_column(Float, nullable=True)
+    applicants: Mapped[int] = mapped_column(Integer, default=0,nullable=True)
+    selected: Mapped[int] = mapped_column(Integer, default=0, nullable=True)
     slug: Mapped[str] = mapped_column(String, unique=True, default=lambda: str(uuid.uuid4()))
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc), nullable=True)
 
@@ -208,8 +210,10 @@ class Candidate(Base):
     education: Mapped[str] = mapped_column(Text, nullable=True)
     resume_url: Mapped[str] = mapped_column(String)
     selected_for_interview: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
+    interview_scheduled: Mapped[bool] = mapped_column(Boolean, default=False,nullable=True)
     selected: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
-    
+    ai_score: Mapped[int] = mapped_column(Integer, default=0,nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc), nullable=True)
     notifications: Mapped[list["Notification"]] = relationship(back_populates="candidate")
     answers: Mapped[list["Answer"]] = relationship(back_populates="candidate", cascade="all, delete-orphan")
     resume_parsing: Mapped["ResumeParsing"] = relationship(back_populates="candidate", uselist=False)
