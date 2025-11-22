@@ -54,9 +54,6 @@ const ApplyJob = () => {
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [isDeadlineEnded, setIsDeadlineEnded] = useState<boolean>(false);
 
-  // ❌ REMOVE THIS → it's wrong
-  // const { job, questions } = useState<JobResponse>();
-
   useEffect(() => {
     const fetchJobDetails = async () => {
       try {
@@ -146,7 +143,6 @@ const ApplyJob = () => {
       education: formData.get("education") || undefined,
       resume_url: resumeUrl || undefined,
 
-      // ✅ Correctly mapping questions
       answers:
         jobData?.questions.map((q) => ({
           question_id: q.question_id,
@@ -402,24 +398,26 @@ const ApplyJob = () => {
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="phone" className="text-sm font-medium">
-                    Phone Number
+                  <Label htmlFor="phone" className="text-sm font-medium flex items-center gap-1">
+                    Phone Number <span className="text-destructive">*</span>
                   </Label>
                   <Input
                     id="phone"
                     name="phone"
                     type="tel"
+                    required
                     placeholder="+1 (555) 000-0000"
                     className="transition-all duration-300 focus:scale-[1.02] focus:shadow-lg"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="location" className="text-sm font-medium">
-                    Location
+                  <Label htmlFor="location" className="text-sm font-medium flex items-center gap-1">
+                    Location <span className="text-destructive">*</span>
                   </Label>
                   <Input
                     id="location"
                     name="location"
+                    required
                     placeholder="City, Country"
                     className="transition-all duration-300 focus:scale-[1.02] focus:shadow-lg"
                   />
@@ -427,12 +425,13 @@ const ApplyJob = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="skills" className="text-sm font-medium">
-                  Skills
+                <Label htmlFor="skills" className="text-sm font-medium flex items-center gap-1">
+                  Skills <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id="skills"
                   name="skills"
+                  required
                   placeholder="React, TypeScript, Node.js (comma separated)"
                   className="transition-all duration-300 focus:scale-[1.02] focus:shadow-lg"
                 />
@@ -440,23 +439,25 @@ const ApplyJob = () => {
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="experience" className="text-sm font-medium">
-                    Years of Experience
+                  <Label htmlFor="experience" className="text-sm font-medium flex items-center gap-1">
+                    Years of Experience <span className="text-destructive">*</span>
                   </Label>
                   <Input
                     id="experience"
                     name="experience"
+                    required
                     placeholder="e.g., 5 years"
                     className="transition-all duration-300 focus:scale-[1.02] focus:shadow-lg"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="education" className="text-sm font-medium">
-                    Education
+                  <Label htmlFor="education" className="text-sm font-medium flex items-center gap-1">
+                    Education <span className="text-destructive">*</span>
                   </Label>
                   <Input
                     id="education"
                     name="education"
+                    required
                     placeholder="e.g., Bachelor's in Computer Science"
                     className="transition-all duration-300 focus:scale-[1.02] focus:shadow-lg"
                   />
@@ -464,8 +465,8 @@ const ApplyJob = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="resume" className="text-sm font-medium">
-                  Resume/CV
+                <Label htmlFor="resume" className="text-sm font-medium flex items-center gap-1">
+                  Resume/CV <span className="text-destructive">*</span>
                 </Label>
                 <div className="relative">
                   <div className="border-2 border-dashed border-border rounded-lg p-6 sm:p-8 hover:border-primary/50 transition-all duration-300 bg-accent/5 hover:bg-accent/10">
@@ -473,6 +474,7 @@ const ApplyJob = () => {
                       id="resume"
                       type="file"
                       accept=".pdf,.doc,.docx"
+                      required
                       onChange={handleFileChange}
                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                     />
@@ -531,6 +533,7 @@ const ApplyJob = () => {
                     <Textarea
                       id={`question-${question.question_id}`}
                       placeholder="Your answer..."
+                      required
                       value={answers[question.question_id] || ""}
                       onChange={(e) =>
                         handleAnswerChange(question.question_id, e.target.value)

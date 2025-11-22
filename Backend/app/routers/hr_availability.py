@@ -47,6 +47,13 @@ def list_hr_availability(
 def get_selected_availability(db: Session = Depends(get_db), hr: HRManager = Depends(get_current_hr)):
     return selected_availability(db, hr.id)
 
+@router.get("/selected-present")
+def is_selected_availability(db: Session = Depends(get_db), hr: HRManager = Depends(get_current_hr)):
+    avail =  selected_availability(db, hr.id)
+    if avail: return True 
+    else: return False
+
+
 @router.put("/select/{availability_id}")
 def select_availability(availability_id: int, db: Session = Depends(get_db)):
     updated = select_avail(db, availability_id)

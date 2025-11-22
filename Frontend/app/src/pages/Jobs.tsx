@@ -9,7 +9,7 @@ import DepartmentForm from "./Depatments";
 import { jobApi, type Job } from "@/services/jobApi";
 import type { Department } from "@/utils/types";
 import { useNavigate } from "react-router-dom";
-
+import { Trash2 } from "lucide-react";
 
 const API_BASE_URL = "http://127.0.0.1:8000";
 
@@ -35,41 +35,64 @@ const Jobs = () => {
     fetchJobs();
   }, []);
 
-  useEffect(()=> {
+  useEffect(() => {
     const fetchJobs = async () => {
-    if (selectedCategory !== null) {
-      let data = await jobApi.getJobsByDepartments(Number(selectedCategory))
-      setJobListing(data);
-    }
-  }
-  fetchJobs();
-  }, [selectedCategory])
+      if (selectedCategory !== null) {
+        let data = await jobApi.getJobsByDepartments(Number(selectedCategory));
+        setJobListing(data);
+      }
+    };
+    fetchJobs();
+  }, [selectedCategory]);
 
-  useEffect(()=> {
+  useEffect(() => {
     applyFilters();
-  }, [selectedCategory])
-
+  }, [selectedCategory]);
 
   const applyFilters = () => {
     let filtered = [...allJobs];
     if (keyword.trim() !== "") {
-      filtered = filtered.filter(job => 
-        job.title.toLowerCase().includes(keyword.toLowerCase()) || 
-        job.description.toLowerCase().includes(keyword.toLowerCase())
+      filtered = filtered.filter(
+        (job) =>
+          job.title.toLowerCase().includes(keyword.toLowerCase()) ||
+          job.description.toLowerCase().includes(keyword.toLowerCase())
       );
     }
 
     if (locationFilter.trim() !== "") {
-      filtered = filtered.filter(job => job.location.toLowerCase().includes(locationFilter.toLowerCase()));
+      filtered = filtered.filter((job) =>
+        job.location.toLowerCase().includes(locationFilter.toLowerCase())
+      );
     }
 
     if (selectedCategory !== null) {
-      filtered = filtered.filter(job => job.department_id === Number(selectedCategory))
+      filtered = filtered.filter(
+        (job) => job.department_id === Number(selectedCategory)
+      );
     }
 
     setJobListing(filtered);
+  };
 
-  }
+  const handleDelete = async (job_id: number) => {
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this job?"
+    );
+    if (!confirmDelete) return;
+
+    try {
+      await jobApi.delete(job_id);
+
+      setJobListing((prev) => prev.filter((job) => job.job_id !== job_id));
+      setAllJobs((prev) => prev.filter((job) => job.job_id !== job_id));
+
+      alert("Job deleted successfully!");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to delete job");
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="p-8">
@@ -92,15 +115,21 @@ const Jobs = () => {
           <div className="flex gap-4">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-              <Input placeholder="Keywords" className="pl-10 h-12"
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)} />
+              <Input
+                placeholder="Keywords"
+                className="pl-10 h-12"
+                value={keyword}
+                onChange={(e) => setKeyword(e.target.value)}
+              />
             </div>
             <div className="flex-1 relative">
               <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-              <Input placeholder="Location" className="pl-10 h-12"
-              value={locationFilter}
-  onChange={(e) => setLocationFilter(e.target.value)} />
+              <Input
+                placeholder="Location"
+                className="pl-10 h-12"
+                value={locationFilter}
+                onChange={(e) => setLocationFilter(e.target.value)}
+              />
             </div>
             <Button className="h-12 px-8" onClick={applyFilters}>
               <Search className="h-5 w-5" />
@@ -118,7 +147,9 @@ const Jobs = () => {
                   {departments.map((category) => (
                     <button
                       key={category.department_name}
-                      onClick={() => setSelectedCategory(category.department_id)}
+                      onClick={() =>
+                        setSelectedCategory(category.department_id)
+                      }
                       className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
                         selectedCategory === category.department_id
                           ? "bg-primary text-primary-foreground"
@@ -126,7 +157,9 @@ const Jobs = () => {
                       }`}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="text-sm">{category.department_name}</span>
+                        <span className="text-sm">
+                          {category.department_name}
+                        </span>
                       </div>
                     </button>
                   ))}
@@ -186,11 +219,28 @@ const Jobs = () => {
                       </div>
                     </div>
 
-                    <div className="text-right">
-                      <p className="font-semibold text-lg text-primary mb-2">
+                    <div className="text-right space-y-2">
+                      <p className="font-semibold text-lg text-primary">
                         Rs. {job.salary_range}K
                       </p>
-                      <Button onClick={()=> navigate(`/candidates?job=${job.job_id}`)}>View Candidates</Button>
+
+                      <div className="flex gap-2 justify-end">
+                        <Button
+                          variant="outline"
+                          onClick={() =>
+                            navigate(`/candidates?job=${job.job_id}`)
+                          }
+                        >
+                          View Candidates
+                        </Button>
+
+                        <Button
+                          className="bg-transparent text-black hover:text-red-600 hover:bg-transparent"
+                          onClick={() => handleDelete(job.job_id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </CardContent>

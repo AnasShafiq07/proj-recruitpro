@@ -12,7 +12,7 @@ from app.services.hr_manager import get_hr_manager
 from app.schemas.google import EventCreate, EmailPayload, SchedulingDetails
 from app.core.security import get_current_hr
 from app.services.candidate import schedule_interview, update_meet_link
-from app.services.hr_availability import get_availability
+from app.services.hr_availability import get_selected_availability
 import json
 from app.services.candidate import get_candidates_without_interview
 from app.services.interview import create_interview
@@ -215,7 +215,7 @@ def create_event(event_data: EventCreate, db: Session = Depends(get_db), hr: HRM
 
 @router.post("/schedule_interviews")
 def schedule_all_interviews(data: SchedulingDetails,db: Session = Depends(get_db), hr: HRManager = Depends(get_current_hr)):
-    availability: HRAvailability = get_availability(db, hr.id)
+    availability: HRAvailability = get_selected_availability(db, hr.id)
     if not availability:
         raise HTTPException(status_code=400, detail="HR availability not configured")
 

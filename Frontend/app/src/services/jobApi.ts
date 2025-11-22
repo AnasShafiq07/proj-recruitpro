@@ -159,6 +159,64 @@ export const jobApi = {
       console.error("JSON parsing error:", err);
       throw new Error("Backend returned invalid JSON");
     }
-  }
+  },
+  
+  async update(job_id: number, updatedJob: Partial<Job>): Promise<Job> {
+    const response = await fetch(`${API_BASE_URL}/jobs/${job_id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${localStorage.getItem("authToken")}`,
+      },
+      body: JSON.stringify(updatedJob),
+    });
+
+    if (!response.ok) {
+      console.error("Update failed:", response.status, response.statusText);
+
+      if (response.status === 404) {
+        throw new Error("Job not found");
+      }
+
+      try {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || "Failed to update job");
+      } catch {
+        throw new Error("Failed to update job");
+      }
+    }
+
+    try {
+      return await response.json();
+    } catch {
+      throw new Error("Invalid JSON returned by backend");
+    }
+  },
+
+  async delete(job_id: number): Promise<boolean> {
+    const response = await fetch(`${API_BASE_URL}/jobs/${job_id}`, {
+      method: "DELETE",
+      headers: {
+        "Authorization": `Bearer ${localStorage.getItem("authToken")}`,
+      },
+    });
+
+    if (!response.ok) {
+      console.error("Delete failed:", response.status, response.statusText);
+
+      if (response.status === 404) {
+        throw new Error("Job not found");
+      }
+
+      try {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || "Failed to delete job");
+      } catch {
+        throw new Error("Failed to delete job");
+      }
+    }
+
+    return true; // backend returns 204 so success = true
+  },
 
 }

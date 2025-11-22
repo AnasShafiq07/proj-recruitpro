@@ -81,7 +81,7 @@ def get_all_jobs(db: Session = Depends(get_db)):
 def get_questions_by_job(job_id: int, db: Session = Depends(get_db)):
     return get_job_questions(db, job_id)
 
-@router.put("/{job_id}", response_model=JobOut, dependencies=[Depends(get_current_hr)])
+@router.put("/{job_id}", dependencies=[Depends(get_current_hr)])
 def update_job_endpoint(job_id: int, job: JobUpdateWithFormUpdate, db: Session = Depends(get_db)):
     db_job = update_job(db, job_id, job)
     if not db_job:
