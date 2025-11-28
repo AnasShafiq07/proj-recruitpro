@@ -35,7 +35,7 @@ SCOPES = "openid email profile https://www.googleapis.com/auth/calendar https://
 
 
 def refresh_google_token(db: Session, hr_id: int, token: GoogleToken):
-    print("Refreshing access token", token.refresh_token)
+    #print("Refreshing access token", token.refresh_token)
     token_url = "https://oauth2.googleapis.com/token"
     old_refresh_token = token.refresh_token
     old_user_id = token.user_id
@@ -74,8 +74,6 @@ def refresh_google_token(db: Session, hr_id: int, token: GoogleToken):
 
 def get_valid_token(db: Session, hr_id: int):
     token: GoogleToken = get_google_token(db, hr_id)
-    print(token.access_token)
-    print(token.expires_at)
     if not token:
         raise HTTPException(status_code=401, detail="Not authenticated with google")
     if token.expires_at <= datetime.now(timezone.utc):

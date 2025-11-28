@@ -8,6 +8,7 @@ class AnswerBase(BaseModel):
 
 class CandidateBase(BaseModel):
     job_id: int
+    company_id: int
     name: str
     email: EmailStr
     phone: Optional[str] = None

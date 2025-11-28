@@ -15,6 +15,7 @@ class Company(Base):
 
     hrs: Mapped[list["HRManager"]] = relationship(back_populates="company")
     jobs: Mapped[list["Job"]] = relationship(back_populates="company")
+    candidates: Mapped[list["Candidate"]] = relationship(back_populates="company")
     departments: Mapped[list["Department"]] = relationship(back_populates="company")
 
 class HRManager(Base):
@@ -201,6 +202,7 @@ class Candidate(Base):
 
     candidate_id: Mapped[int] = mapped_column(primary_key=True, index=True)
     job_id: Mapped[int] = mapped_column(ForeignKey("job.job_id"))
+    company_id: Mapped[int] = mapped_column(ForeignKey("company.company_id"), nullable=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
     email: Mapped[str] = mapped_column(String, unique=False, nullable=False)
     phone: Mapped[str] = mapped_column(String, nullable=True)
@@ -218,6 +220,7 @@ class Candidate(Base):
     notifications: Mapped[list["Notification"]] = relationship(back_populates="candidate")
     answers: Mapped[list["Answer"]] = relationship(back_populates="candidate", cascade="all, delete-orphan")
     resume_parsing: Mapped["ResumeParsing"] = relationship(back_populates="candidate", uselist=False)
+    company: Mapped["Company"] = relationship(back_populates="candidates")
 
 
 class Answer(Base):

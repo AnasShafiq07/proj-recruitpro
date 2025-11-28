@@ -1,5 +1,6 @@
 
 import type { Department } from "@/utils/types";
+import { getJobById } from "./jobService";
 
 const API_BASE_URL = "http://127.0.0.1:8000";
 
@@ -33,8 +34,23 @@ export interface Job {
 
 export const jobApi = {
 
+  async getJobById(jobId: number): Promise<Job> {
+     const response = await fetch(`${API_BASE_URL}/jobs/${jobId}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${localStorage.getItem("authToken")}`,
+      },
+    });
+
+    if (!response.ok) {
+      console.error("Response not OK:", response.status, response.statusText);
+    }
+    return response.json();
+  },
+
     async getAll(): Promise<Job[]> {
-        const response = await fetch(`${API_BASE_URL}/jobs/get-all`, {
+      const response = await fetch(`${API_BASE_URL}/jobs/get-all`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",

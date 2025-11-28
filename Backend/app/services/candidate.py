@@ -6,6 +6,7 @@ from app.schemas.candidate import CandidateCreate, CandidateUpdate, CandidateCre
 def create_candidate(db: Session, candidate_data: CandidateCreateWithAnswersAndPayment):
     db_candidate = models.Candidate(
         job_id = candidate_data.job_id,
+        company_id = candidate_data.company_id,
         name=candidate_data.name,
         email=candidate_data.email,
         phone=candidate_data.phone,
@@ -43,8 +44,8 @@ def get_candidate_by_email(db: Session, email: str):
     return db.query(models.Candidate).filter(models.Candidate.email == email).first()
 
 
-def get_candidates(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(models.Candidate).offset(skip).limit(limit).all()
+def get_candidates(db: Session, company_id: int, skip: int = 0, limit: int = 100):
+    return db.query(models.Candidate).filter(models.Candidate.company_id == company_id).offset(skip).limit(limit).all()
 
 def get_candidates_without_interview(db: Session, hr_id: int, job_id: int):
     return (

@@ -24,6 +24,23 @@ export interface Candidate {
 
 
 export const candidateApi = {
+
+  async getTotalApplied(): Promise<Candidate[]> {
+    const response = await fetch(`${API_BASE_URL}`, {
+      method: "GET", 
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${localStorage.getItem("authToken")}`,
+      },
+    });
+
+    if(!response.ok) {
+      console.error("Error:", response.status, response.statusText);
+      return [];
+    }
+    return await response.json();
+  },
+
   async getAll(job_id: number): Promise<Candidate[]> {
     job_id = 2;
     const response = await fetch(`${API_BASE_URL}/by-job/${job_id}`, {
@@ -137,5 +154,18 @@ export const candidateApi = {
 
     if (!response.ok) return false;
     return true;
+  },
+
+  async candidatesWithoutInterview(job_id: number): Promise<Candidate[]> {
+    const response = await fetch(`${API_BASE_URL}/candidates/candidates-without-interview/${job_id}`, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${localStorage.getItem("authToken")}`,
+      },
+    });
+
+    if (!response.ok) return [];
+    const data = await response.json();
+    return data;
   },
 };

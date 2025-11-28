@@ -1,18 +1,60 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Mail, Phone, MapPin, FileText, Clock, CheckCircle, XCircle, Award, Briefcase, GraduationCap, Download, Link } from 'lucide-react';
+import { 
+  Calendar, 
+  Mail, 
+  Phone, 
+  MapPin, 
+  FileText, 
+  Clock, 
+  CheckCircle, 
+  XCircle, 
+  Award, 
+  Briefcase, 
+  GraduationCap, 
+  Download, 
+  Link as LinkIcon,
+  ChevronLeft,
+  MoreHorizontal,
+  Video,
+  ExternalLink,
+  Loader2,
+  LayoutDashboard,
+  Users,
+  Settings,
+  LogOut,
+  Bell
+} from 'lucide-react';
+
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
+
 
 const API_BASE_URL = "http://127.0.0.1:8000";
 
 const CandidateView = () => {
+  // State from your logic
   const [googleAuthenticated, setGoogleAuthenticated] = useState<boolean>(false);
-  const [candidate, setCandidate] = useState(null);
+  const [candidate, setCandidate] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [showResumeModal, setShowResumeModal] = useState(false);
   const [scheduling, setScheduling] = useState(false);
   const [scheduleSuccess, setScheduleSuccess] = useState(false);
-  const [resumeBlobUrl, setResumeBlobUrl] = useState(null);
+  const [resumeBlobUrl, setResumeBlobUrl] = useState<string | null>(null);
   const [isResumeLoading, setIsResumeLoading] = useState(false);
   
   const [interviewForm, setInterviewForm] = useState({
@@ -22,15 +64,17 @@ const CandidateView = () => {
     end_time: '',
   });
 
-  // Get candidate_id from URL params
+  // --- REAL DATA FETCHING ---
+
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    const candidateId = urlParams.get('candidate') || '1';
+    // Defaulting to '1' for demo if no param exists
+    const candidateId = urlParams.get('candidate') || '1'; 
     fetchCandidateDetails(candidateId);
     fetchGoogleDetails();
   }, []);
 
-  const fetchGoogleDetails  = async () => {
+  const fetchGoogleDetails = async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/google/auth/status`, {
         headers: {
@@ -43,11 +87,13 @@ const CandidateView = () => {
         setGoogleAuthenticated(data.authenticated);
       }
     } catch (error) {
-      console.error('Error fetching candidate:', error);
+      console.error('Error fetching google status:', error);
     }
   }
-  const fetchCandidateDetails = async (id) => {
+
+  const fetchCandidateDetails = async (id: string) => {
     try {
+      setLoading(true);
       const response = await fetch(`${API_BASE_URL}/candidates/${id}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
@@ -57,6 +103,11 @@ const CandidateView = () => {
       if (response.ok) {
         const data = await response.json();
         setCandidate(data);
+        // Pre-fill interview form title
+        setInterviewForm(prev => ({
+          ...prev,
+          summary: `Interview with ${data.name}`
+        }));
       }
     } catch (error) {
       console.error('Error fetching candidate:', error);
@@ -91,10 +142,9 @@ const CandidateView = () => {
       });
 
       if (response.ok) {
-        const result = await response.json();
         setScheduleSuccess(true);
         
-        // Update candidate interview status
+        // Update candidate interview status locally and on backend
         await fetch(`${API_BASE_URL}/candidates/update/${candidate.candidate_id}`, {
           method: 'PATCH',
           headers: {
@@ -103,6 +153,9 @@ const CandidateView = () => {
           },
           body: JSON.stringify({ interview_scheduled: true }),
         });
+
+        // Optimistic update
+        setCandidate((prev: any) => ({ ...prev, interview_scheduled: true }));
 
         setTimeout(() => {
           setShowScheduleModal(false);
@@ -120,7 +173,10 @@ const CandidateView = () => {
     }
   };
 
-  const handleStatusUpdate = async (field, value) => {
+  const handleStatusUpdate = async (field: string, value: boolean) => {
+    // Optimistic UI update
+    setCandidate((prev: any) => ({ ...prev, [field]: value }));
+
     try {
       await fetch(`${API_BASE_URL}/candidates/update/${candidate.candidate_id}`, {
         method: 'PATCH',
@@ -130,18 +186,21 @@ const CandidateView = () => {
         },
         body: JSON.stringify({ [field]: value }),
       });
+      // Re-fetch to ensure sync
       fetchCandidateDetails(candidate.candidate_id);
     } catch (error) {
       console.error('Error updating status:', error);
+      // Revert optimistic update on error
+      setCandidate((prev: any) => ({ ...prev, [field]: !value }));
     }
   };
 
-  // Fetch resume as blob with auth header and return object URL
+  // Fetch resume logic
   const fetchResumeBlob = async () => {
     if (!candidate?.resume_url) {
       throw new Error('No resume available for this candidate');
     }
-    console.log(candidate.resume_url);
+    
     setIsResumeLoading(true);
     try {
       const res = await fetch(`${candidate.resume_url}`, {
@@ -157,7 +216,7 @@ const CandidateView = () => {
 
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
-      // revoke any previous blob URL
+      
       if (resumeBlobUrl) URL.revokeObjectURL(resumeBlobUrl);
       setResumeBlobUrl(url);
       return { url, blob };
@@ -172,16 +231,15 @@ const CandidateView = () => {
       setShowResumeModal(true);
     } catch (err) {
       console.error('Error opening resume:', err);
-      alert("Resume not available.");
+      alert("Resume not available or failed to load.");
     }
   };
 
   const handleDownload = async () => {
     try {
-      const { url, blob } = await fetchResumeBlob();
-      // derive filename from resume_url
+      const { url } = await fetchResumeBlob();
       const parts = candidate.resume_url.split('/');
-      const fileName = parts[parts.length - 1] || `resume_${candidate.candidate_id}`;
+      const fileName = parts[parts.length - 1] || `resume_${candidate.candidate_id}.pdf`;
 
       const a = document.createElement('a');
       a.href = url;
@@ -189,358 +247,375 @@ const CandidateView = () => {
       document.body.appendChild(a);
       a.click();
       a.remove();
-
-      // revoke object URL after a short delay
-      setTimeout(() => {
-        if (url) URL.revokeObjectURL(url);
-        setResumeBlobUrl(null);
-      }, 1500);
     } catch (err) {
       console.error('Error downloading resume:', err);
       alert("Resume not available.");
     }
   };
 
-  // Cleanup blob URL when modal closes or component unmounts
+  // Cleanup blob URL
   useEffect(() => {
     return () => {
       if (resumeBlobUrl) {
         URL.revokeObjectURL(resumeBlobUrl);
-        setResumeBlobUrl(null);
       }
     };
   }, [resumeBlobUrl]);
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-xl text-gray-600">Loading candidate details...</div>
-      </div>
+      <DashboardLayout>
+        <div className="h-[calc(100vh-4rem)] flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+            <p className="text-gray-500 font-medium">Loading candidate profile...</p>
+          </div>
+        </div>
+      </DashboardLayout>
     );
   }
 
-  if (!candidate) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-xl text-gray-600">Candidate not found</div>
+  if (!candidate) return (
+    <DashboardLayout>
+      <div className="p-8 flex items-center justify-center h-[calc(100vh-4rem)] text-gray-500">
+        Candidate not found
       </div>
-    );
-  }
+    </DashboardLayout>
+  );
 
   return (
     <DashboardLayout>
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <button 
-            onClick={() => window.history.back()}
-            className="text-blue-600 hover:text-blue-800 mb-2"
-          >
-            ← Back to Candidates
-          </button>
-          <h1 className="text-3xl font-bold text-gray-900">Candidate Profile</h1>
-        </div>
-      </div>
+      <div className="p-6 md:p-8 animate-in fade-in duration-500">
+        <div className="max-w-7xl mx-auto space-y-6">
+          
+          {/* Navigation Header */}
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" className="gap-2 text-gray-500 hover:text-gray-900 pl-0" onClick={() => window.history.back()}>
+              <ChevronLeft className="h-4 w-4" />
+              Back to Candidates
+            </Button>
+          </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Main Info */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Profile Card */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center space-x-4">
-                  <div className="w-20 h-20 bg-blue-600 rounded-full flex items-center justify-center text-white text-3xl font-bold">
-                    {candidate.name.charAt(0).toUpperCase()}
-                  </div>
-                  <div>
-                    <h2 className="text-2xl font-bold text-gray-900">{candidate.name}</h2>
-                    <div className="flex items-center space-x-4 mt-2 text-gray-600">
-                      <span className="flex items-center">
-                        <Mail className="w-4 h-4 mr-1" />
-                        {candidate.email}
-                      </span>
-                      {candidate.phone && (
-                        <span className="flex items-center">
-                          <Phone className="w-4 h-4 mr-1" />
-                          {candidate.phone}
-                        </span>
-                      )}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            {/* LEFT COLUMN: Main Profile Info */}
+            <div className="lg:col-span-2 space-y-6">
+              
+              {/* Header Card */}
+              <Card className="border-l-4 border-l-blue-600 shadow-sm">
+                <CardContent className="p-6">
+                  <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
+                    <div className="flex gap-5">
+                      <Avatar className="h-24 w-24 border-4 border-white shadow-sm">
+                        <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${candidate.name}`} />
+                        <AvatarFallback>{candidate.name?.charAt(0)}</AvatarFallback>
+                      </Avatar>
+                      <div className="space-y-1">
+                        <h1 className="text-2xl font-bold text-gray-900">{candidate.name}</h1>
+                        <div className="flex flex-col gap-1 text-sm text-gray-500">
+                          <div className="flex items-center gap-2">
+                            <Mail className="h-4 w-4" /> {candidate.email}
+                          </div>
+                          {candidate.phone && (
+                            <div className="flex items-center gap-2">
+                              <Phone className="h-4 w-4" /> {candidate.phone}
+                            </div>
+                          )}
+                          {candidate.location && (
+                            <div className="flex items-center gap-2">
+                              <MapPin className="h-4 w-4" /> {candidate.location}
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    {candidate.location && (
-                      <div className="flex items-center mt-1 text-gray-600">
-                        <MapPin className="w-4 h-4 mr-1" />
-                        {candidate.location}
+                    
+                    {/* AI Score Badge */}
+                    {candidate.ai_score !== null && (
+                      <div className="flex flex-col items-end gap-2">
+                        <div className="bg-blue-50 text-blue-700 px-4 py-2 rounded-xl flex flex-col items-center border border-blue-100">
+                          <span className="text-3xl font-bold tracking-tight">{candidate.ai_score}</span>
+                          <span className="text-xs font-semibold uppercase tracking-wider">AI Match</span>
+                        </div>
                       </div>
                     )}
                   </div>
-                </div>
-                {candidate.ai_score !== null && (
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-blue-600">{candidate.ai_score}</div>
-                    <div className="text-sm text-gray-600">AI Score</div>
+                </CardContent>
+              </Card>
+
+              {/* Experience Section */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Briefcase className="h-5 w-5 text-blue-600" />
+                    Work Experience
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="prose prose-sm max-w-none text-gray-600 whitespace-pre-line leading-relaxed">
+                    {candidate.experience || "No experience listed."}
                   </div>
-                )}
-              </div>
+                </CardContent>
+              </Card>
+
+              {/* Education Section */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <GraduationCap className="h-5 w-5 text-blue-600" />
+                    Education
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="prose prose-sm max-w-none text-gray-600 whitespace-pre-line leading-relaxed">
+                    {candidate.education || "No education listed."}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Skills Section */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Award className="h-5 w-5 text-blue-600" />
+                    Skills
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-wrap gap-2">
+                    {candidate.skills ? (
+                      typeof candidate.skills === 'string' 
+                        ? candidate.skills.split(',').map((skill: string, idx: number) => (
+                            <Badge key={idx} variant="secondary" className="px-3 py-1 bg-gray-100 text-gray-700 hover:bg-gray-200">
+                              {skill.trim()}
+                            </Badge>
+                          ))
+                        : <span className="text-gray-700">{candidate.skills}</span>
+                    ) : (
+                      <span className="text-gray-500 italic">No skills listed</span>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
             </div>
 
-            {/* Education */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-                <GraduationCap className="w-6 h-6 mr-2 text-blue-600" />
-                Education
-              </h3>
-              <p className="text-gray-700">{candidate.education || 'Not specified'}</p>
-            </div>
-
-            {/* Experience */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-                <Briefcase className="w-6 h-6 mr-2 text-blue-600" />
-                Experience
-              </h3>
-              <p className="text-gray-700 whitespace-pre-line">{candidate.experience || 'Not specified'}</p>
-            </div>
-
-            {/* Skills */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-                <Award className="w-6 h-6 mr-2 text-blue-600" />
-                Skills
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                {candidate.skills ? (
-                  typeof candidate.skills === 'string' 
-                    ? candidate.skills.split(',').map((skill, idx) => (
-                        <span key={idx} className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
-                          {skill.trim()}
-                        </span>
-                      ))
-                    : <span className="text-gray-700">{candidate.skills}</span>
-                ) : (
-                  <span className="text-gray-500">No skills listed</span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Right Column - Actions & Status */}
-          <div className="space-y-6">
-            {/* Action Buttons */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Actions</h3>
-              <div className="space-y-3">
-                <button
-                  disabled={!googleAuthenticated}
-                  onClick={() => setShowScheduleModal(true)}
-                  className="w-full flex items-center justify-center px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-                >
-                  <Calendar className="w-5 h-5 mr-2" />
-                  {googleAuthenticated === true ? "Schedule Interview" : "Google account not connected"}
-                </button>
-                
-                <button
-                  onClick={handleOpenResume}
-                  className="w-full flex items-center justify-center px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
-                >
-                  <FileText className="w-5 h-5 mr-2" />
-                  {isResumeLoading ? 'Loading...' : 'View Resume'}
-                </button>
-
-                <button
-                  onClick={handleDownload}
-                  className="w-full flex items-center justify-center px-4 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition"
-                >
-                  <Download className="w-5 h-5 mr-2" />
-                  Download Resume
-                </button>
-              </div>
-            </div>
-
-            {/* Status Card */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Candidate Status</h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-700">Selected for Interview</span>
-                  <button
-                    onClick={() => handleStatusUpdate('selected_for_interview', !candidate.selected_for_interview)}
-                    className={`p-1 rounded ${candidate.selected_for_interview ? 'text-green-600' : 'text-gray-400'}`}
+            {/* RIGHT COLUMN: Actions & Status */}
+            <div className="space-y-6">
+              
+              {/* Actions Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Quick Actions</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <Button 
+                    className="w-full justify-start bg-blue-600 hover:bg-blue-700"
+                    disabled={!googleAuthenticated}
+                    onClick={() => setShowScheduleModal(true)}
                   >
-                    {candidate.selected_for_interview ? <CheckCircle className="w-6 h-6" /> : <XCircle className="w-6 h-6" />}
-                  </button>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-700">Interview Scheduled</span>
-                  <span className={`p-1 rounded ${candidate.interview_scheduled ? 'text-green-600' : 'text-gray-400'}`}>
-                    {candidate.interview_scheduled ? <CheckCircle className="w-6 h-6" /> : <Clock className="w-6 h-6" />}
-                  </span>
-                </div>
-                {candidate.meet_link && (
-                                <div className="flex flex-col border-t pt-4">
-                                    <span className="text-gray-700 flex items-center mb-2">
-                                        <Link className="w-4 h-4 mr-2 text-blue-600" />
-                                        Meeting Link:
-                                    </span>
-                                    <a 
-                                        href={candidate.meet_link} 
-                                        target="_blank" 
-                                        rel="noopener noreferrer"
-                                        className="text-sm text-blue-600 truncate hover:underline"
-                                        title={candidate.meet_link}
-                                    >
-                                        {candidate.meet_link}
-                                    </a>
-                                </div>
-                            )}
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-700">Final Selection</span>
-                  <button
-                    onClick={() => handleStatusUpdate('selected', !candidate.selected)}
-                    className={`p-1 rounded ${candidate.selected ? 'text-green-600' : 'text-gray-400'}`}
-                  >
-                    {candidate.selected ? <CheckCircle className="w-6 h-6" /> : <XCircle className="w-6 h-6" />}
-                  </button>
-                </div>
-              </div>
-            </div>
+                    <Calendar className="mr-2 h-4 w-4" />
+                    {googleAuthenticated ? "Schedule Interview" : "Connect Google Calendar"}
+                  </Button>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button 
+                      variant="outline" 
+                      className="w-full justify-start"
+                      onClick={handleOpenResume}
+                    >
+                      <FileText className="mr-2 h-4 w-4" />
+                      {isResumeLoading ? 'Loading...' : 'View CV'}
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      className="w-full justify-start"
+                      onClick={handleDownload}
+                    >
+                      <Download className="mr-2 h-4 w-4" />
+                      Download
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
 
-            {/* Timeline */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Timeline</h3>
-              <div className="text-sm text-gray-600">
-                <div className="flex items-center mb-2">
-                  <Clock className="w-4 h-4 mr-2" />
-                  Applied: {candidate.created_at ? new Date(candidate.created_at).toLocaleDateString() : 'N/A'}
-                </div>
-              </div>
+              {/* Pipeline Status */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Hiring Pipeline</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  
+                  {/* Stage 1 */}
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <p className="text-sm font-medium text-gray-900">Shortlisted</p>
+                      <p className="text-xs text-gray-500">Qualified for interview</p>
+                    </div>
+                    <Button
+                      size="icon"
+                      variant={candidate.selected_for_interview ? "default" : "outline"}
+                      className={candidate.selected_for_interview ? "bg-green-600 hover:bg-green-700 h-8 w-8 rounded-full" : "h-8 w-8 rounded-full"}
+                      onClick={() => handleStatusUpdate('selected_for_interview', !candidate.selected_for_interview)}
+                    >
+                      {candidate.selected_for_interview ? <CheckCircle className="h-4 w-4" /> : <MoreHorizontal className="h-4 w-4" />}
+                    </Button>
+                  </div>
+
+                  <Separator />
+
+                  {/* Stage 2 */}
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <p className="text-sm font-medium text-gray-900">Interview</p>
+                      <p className="text-xs text-gray-500">
+                        {candidate.interview_scheduled ? 'Scheduled' : 'Pending scheduling'}
+                      </p>
+                    </div>
+                    <div className={`h-8 w-8 rounded-full flex items-center justify-center ${candidate.interview_scheduled ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'}`}>
+                      {candidate.interview_scheduled ? <Video className="h-4 w-4" /> : <Clock className="h-4 w-4" />}
+                    </div>
+                  </div>
+
+                  {candidate.meet_link && (
+                    <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 mt-2">
+                      <p className="text-xs font-medium text-blue-700 mb-1 flex items-center gap-1">
+                        <Video className="h-3 w-3" /> Google Meet Link
+                      </p>
+                      <a href={candidate.meet_link} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline break-all flex items-center gap-1">
+                        {candidate.meet_link} <ExternalLink className="h-3 w-3" />
+                      </a>
+                    </div>
+                  )}
+
+                  <Separator />
+
+                  {/* Stage 3 */}
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <p className="text-sm font-medium text-gray-900">Final Offer</p>
+                      <p className="text-xs text-gray-500">Select to hire</p>
+                    </div>
+                    <Button
+                      size="icon"
+                      variant={candidate.selected ? "default" : "outline"}
+                      className={candidate.selected ? "bg-green-600 hover:bg-green-700 h-8 w-8 rounded-full" : "h-8 w-8 rounded-full"}
+                      onClick={() => handleStatusUpdate('selected', !candidate.selected)}
+                    >
+                      {candidate.selected ? <CheckCircle className="h-4 w-4" /> : <MoreHorizontal className="h-4 w-4" />}
+                    </Button>
+                  </div>
+
+                </CardContent>
+              </Card>
+
+              {/* Timeline Info */}
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center text-sm text-gray-500 gap-2">
+                    <Clock className="h-4 w-4" />
+                    <span>Applied on {candidate.created_at ? new Date(candidate.created_at).toLocaleDateString() : 'N/A'}</span>
+                  </div>
+                </CardContent>
+              </Card>
+
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Schedule Interview Modal */}
-      {showScheduleModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4">
+        {/* Schedule Interview Modal */}
+        <Dialog open={showScheduleModal} onOpenChange={setShowScheduleModal}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Schedule Interview</DialogTitle>
+            </DialogHeader>
+            
             {scheduleSuccess ? (
-              <div className="text-center">
-                <CheckCircle className="w-16 h-16 text-green-600 mx-auto mb-4" />
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Interview Scheduled!</h3>
-                <p className="text-gray-600">Calendar invite sent to {candidate.email}</p>
+              <div className="py-8 flex flex-col items-center justify-center text-center animate-in fade-in zoom-in duration-300">
+                <div className="h-16 w-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                  <CheckCircle className="h-8 w-8 text-green-600" />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900">Interview Scheduled!</h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  A calendar invitation has been sent to {candidate.email}.
+                </p>
               </div>
             ) : (
-              <>
-                <h3 className="text-2xl font-bold text-gray-900 mb-6">Schedule Interview</h3>
-                
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Interview Title
-                    </label>
-                    <input
-                      type="text"
-                      value={interviewForm.summary}
-                      onChange={(e) => setInterviewForm({...interviewForm, summary: e.target.value})}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Description
-                    </label>
-                    <textarea
-                      value={interviewForm.description}
-                      onChange={(e) => setInterviewForm({...interviewForm, description: e.target.value})}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      rows={3}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Start Time
-                    </label>
-                    <input
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>Interview Title</Label>
+                  <Input 
+                    value={interviewForm.summary} 
+                    onChange={(e) => setInterviewForm({...interviewForm, summary: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Description</Label>
+                  <Textarea 
+                    value={interviewForm.description} 
+                    onChange={(e) => setInterviewForm({...interviewForm, description: e.target.value})}
+                    rows={3}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Start Time</Label>
+                    <Input 
                       type="datetime-local"
                       value={interviewForm.start_time}
                       onChange={(e) => setInterviewForm({...interviewForm, start_time: e.target.value})}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      End Time
-                    </label>
-                    <input
+                  <div className="space-y-2">
+                    <Label>End Time</Label>
+                    <Input 
                       type="datetime-local"
                       value={interviewForm.end_time}
                       onChange={(e) => setInterviewForm({...interviewForm, end_time: e.target.value})}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
                 </div>
-
-                <div className="flex space-x-3 mt-6">
-                  <button
-                    onClick={() => setShowScheduleModal(false)}
-                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
-                    disabled={scheduling}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleScheduleInterview}
-                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:bg-blue-400"
-                    disabled={scheduling}
-                  >
-                    {scheduling ? 'Scheduling...' : 'Schedule'}
-                  </button>
-                </div>
-              </>
+              </div>
             )}
-          </div>
-        </div>
-      )}
 
-      {/* Resume Modal */}
-      {showResumeModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg w-full max-w-4xl h-5/6 flex flex-col">
-            <div className="flex items-center justify-between p-4 border-b">
-              <h3 className="text-xl font-bold text-gray-900">Resume - {candidate.name}</h3>
-              <button
-                onClick={() => setShowResumeModal(false)}
-                className="text-gray-500 hover:text-gray-700 text-2xl"
-              >
-                ×
-              </button>
+            {!scheduleSuccess && (
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowScheduleModal(false)}>Cancel</Button>
+                <Button onClick={handleScheduleInterview} disabled={scheduling} className="bg-blue-600 hover:bg-blue-700">
+                  {scheduling ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Scheduling...</> : 'Confirm Schedule'}
+                </Button>
+              </DialogFooter>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Resume Modal */}
+        <Dialog open={showResumeModal} onOpenChange={setShowResumeModal}>
+          <DialogContent className="max-w-4xl h-[80vh] flex flex-col p-0 overflow-hidden">
+            <div className="px-6 py-4 border-b flex items-center justify-between">
+              <h3 className="font-semibold text-lg">Resume Preview</h3>
             </div>
-            <div className="flex-1 overflow-hidden">
+            <div className="flex-1 bg-gray-100 flex items-center justify-center relative">
               {isResumeLoading ? (
-                <div className="w-full h-full flex items-center justify-center">
-                  <div className="text-gray-600">Loading resume...</div>
-                </div>
+                 <div className="text-gray-500 flex items-center gap-2">
+                   <Loader2 className="h-5 w-5 animate-spin" /> Loading PDF...
+                 </div>
               ) : resumeBlobUrl ? (
-                <iframe
-                  src={resumeBlobUrl}
-                  className="w-full h-full"
-                  title="Resume"
+                <iframe 
+                  src={resumeBlobUrl} 
+                  className="w-full h-full" 
+                  title="Resume PDF"
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <div className="text-gray-600">No resume available</div>
+                <div className="text-center p-8 bg-white shadow-sm rounded-lg">
+                   <FileText className="h-12 w-12 text-gray-300 mx-auto mb-2" />
+                   <p className="text-gray-500">Unable to load resume preview.</p>
                 </div>
               )}
             </div>
-          </div>
-        </div>
-      )}
-    </div>
+          </DialogContent>
+        </Dialog>
+
+      </div>
     </DashboardLayout>
   );
 };

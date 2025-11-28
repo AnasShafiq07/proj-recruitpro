@@ -28,6 +28,7 @@ interface Question {
 
 interface Job {
   job_id: number;
+  company_id: number;
   title: string;
   description?: string;
   requirements?: string;
@@ -134,6 +135,7 @@ const ApplyJob = () => {
 
     const candidateData = {
       job_id: jobData?.job.job_id,
+      company_id: jobData?.job.company_id,
       name: formData.get("name"),
       email: formData.get("email"),
       phone: formData.get("phone") || undefined,

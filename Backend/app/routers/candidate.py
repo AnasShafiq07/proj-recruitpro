@@ -18,11 +18,13 @@ from app.services.candidate import (
     get_selected_for_interview,
     get_selected_candi,
     get_all_candidates_by_job,
-    deselect_candi
+    deselect_candi,
+    get_candidates_without_interview as candidates_without_interview
 )
 from app.services.job import increment_applicants
 from app.services.payment import create_stripe_payment_intent, create_payment_record
 from app.db import models
+from app.core.security import get_current_hr
 
 router = APIRouter(prefix="/candidates", tags=["Candidates"])
 
@@ -73,7 +75,8 @@ def get_candidate_endpoint(candidate_id: int, db: Session = Depends(get_db)):
 @router.put("/select/{candidate_id}")
 def select_candidate(candidate_id: int, db: Session = Depends(get_db)):
     candidate = get_candidate(db, candidate_id)
-    if not candidate or candidate.selected_for_interview == False:
+    print(candidate.candidate_id)
+    if not candidate:
         raise HTTPException(status_code=404, detail="Candidate not present or have not given interview")    
     select_candi(db, candidate_id)
     return True    
@@ -81,14 +84,15 @@ def select_candidate(candidate_id: int, db: Session = Depends(get_db)):
 @router.put("/de-select/{candidate_id}")
 def select_candidate(candidate_id: int, db: Session = Depends(get_db)):
     candidate = get_candidate(db, candidate_id)
-    if not candidate or candidate.selected_for_interview == False:
+    if not candidate:
         raise HTTPException(status_code=404, detail="Candidate not present or have not given interview")    
     deselect_candi(db, candidate_id)
     return True    
 
 @router.get("/")
-def get_all_candidates(db: Session = Depends(get_db)):
-    return get_candidates(db)
+def get_all_candidates(db: Session = Depends(get_db), hr: models.HRManager = Depends(get_current_hr)):
+    return get_candidates(db, hr.company_id)
+
 
 @router.get("/by-job/{job_id}")
 def get_candidates_by_job(job_id: int, db: Session = Depends(get_db)):
@@ -133,3 +137,8 @@ def get_selected_candidates(job_id: int, db: Session = Depends(get_db)):
         "candidates": candidates,
         "length": len(candidates)
     }
+
+
+@router.get("/candidates-without-interview/{job_id}")
+def get_candidates_without_interview(job_id: int, db: Session = Depends(get_db), hr: models.HRManager = Depends(get_current_hr)):
+    return candidates_without_interview(db, hr.id, job_id)
