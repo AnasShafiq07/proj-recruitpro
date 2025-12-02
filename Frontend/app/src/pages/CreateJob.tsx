@@ -28,31 +28,28 @@ const CreateJob = () => {
   const [jobCreated, setJobCreated] = useState<boolean>(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [linkToShare, setLinkToShare] = useState("");
-
   const [linkedinConnected, setLinkedinConnected] = useState<boolean>(false);
-  
-  
-    
-    const fetchLinkedInDetails = async () => {
-      try {
-        const response = await fetch(`${API_BASE_URL}/linkedin/auth/status`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-          },
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          setLinkedinConnected(data.authenticated);
-        }
-      } catch (error) {
-        console.error('Error fetching candidate:', error);
+
+  const fetchLinkedInDetails = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/linkedin/auth/status`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+        },
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setLinkedinConnected(data.authenticated);
       }
+    } catch (error) {
+      console.error('Error fetching candidate:', error);
     }
+  }
+
   useEffect(() => {
     const fetchDepartments = async () => {
       try {
-
         const response = await fetch("http://127.0.0.1:8000/departments/get/all", {
           method: "GET",
           headers: {
@@ -152,38 +149,46 @@ const CreateJob = () => {
 
   return (
     <DashboardLayout>
-      <div className="min-h-screen bg-gradient-subtle">
-        <div className="p-8 max-w-5xl mx-auto">
+      <div className="min-h-screen bg-background">
+        <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto">
           {/* Header */}
-          <div className="mb-8 animate-slide-in">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="p-2 bg-gradient-primary rounded-lg">
-                <Briefcase className="h-6 w-6 text-primary-foreground" />
+          <div className="mb-6 lg:mb-8 animate-fade-in">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-primary/10 rounded-xl border border-primary/20">
+                  <Briefcase className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground">
+                    Create Job Posting
+                  </h1>
+                  <p className="text-muted-foreground text-sm sm:text-base mt-1">
+                    Fill in the details to create a new opportunity for top talent
+                  </p>
+                </div>
               </div>
-              <h1 className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-                Create Job Posting
-              </h1>
             </div>
-            <p className="text-muted-foreground text-lg">
-              Fill in the details to create a new opportunity for top talent
-            </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-5 lg:space-y-6">
             {/* Job Information */}
-            <Card className="shadow-elegant border-border/50 hover:shadow-glow transition-all duration-300 animate-fade-in">
-              <CardHeader className="border-b border-border/50">
-                <CardTitle className="text-2xl flex items-center gap-2">
-                  <Briefcase className="h-5 w-5 text-primary" />
-                  Job Information
-                </CardTitle>
-                <CardDescription>Core details about the position</CardDescription>
+            <Card className="border-border/50 shadow-sm hover:shadow-md transition-all duration-300 animate-fade-in">
+              <CardHeader className="border-b border-border/30 pb-4">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 bg-primary/10 rounded-lg">
+                    <Briefcase className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg sm:text-xl">Job Information</CardTitle>
+                    <CardDescription className="text-xs sm:text-sm">Core details about the position</CardDescription>
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent className="pt-6 space-y-6">
-                <div className="grid md:grid-cols-2 gap-6">
+              <CardContent className="pt-5 lg:pt-6 space-y-5 lg:space-y-6">
+                <div className="grid sm:grid-cols-2 gap-4 lg:gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="title" className="text-sm font-semibold">
-                      Job Title *
+                    <Label htmlFor="title" className="text-sm font-medium flex items-center gap-1">
+                      Job Title <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       id="title"
@@ -192,16 +197,16 @@ const CreateJob = () => {
                       value={jobTitle}
                       onChange={(e) => setJobTitle(e.target.value)}
                       required
-                      className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
+                      className="h-10 transition-all"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="department-select" className="text-sm font-semibold">
-                      Department *
+                    <Label htmlFor="department-select" className="text-sm font-medium flex items-center gap-1">
+                      Department <span className="text-destructive">*</span>
                     </Label>
                     <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
-                      <SelectTrigger className="transition-all duration-200 focus:ring-2 focus:ring-primary/20">
+                      <SelectTrigger className="h-10 transition-all">
                         <SelectValue placeholder="Select a department" />
                       </SelectTrigger>
                       <SelectContent>
@@ -220,96 +225,97 @@ const CreateJob = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="description" className="text-sm font-semibold">
-                    Job Description *
+                  <Label htmlFor="description" className="text-sm font-medium flex items-center gap-1">
+                    Job Description <span className="text-destructive">*</span>
                   </Label>
                   <Textarea
                     id="description"
                     name="description"
                     placeholder="Describe the role, responsibilities, and what makes this opportunity unique..."
-                    rows={8}
+                    rows={6}
                     required
-                    className="resize-none transition-all duration-200 focus:ring-2 focus:ring-primary/20"
+                    className="resize-none transition-all"
                   />
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-6">
+                <div className="grid sm:grid-cols-2 gap-4 lg:gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="experience" className="text-sm font-semibold">
+                    <Label htmlFor="experience" className="text-sm font-medium">
                       Required Experience
                     </Label>
                     <Input
                       id="experience"
                       name="experience"
                       placeholder="e.g., 5+ years"
-                      className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
+                      className="h-10 transition-all"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="jobType" className="text-sm font-semibold">
+                    <Label htmlFor="jobType" className="text-sm font-medium">
                       Job Type
                     </Label>
                     <Input
                       id="jobType"
                       name="jobType"
                       placeholder="e.g., Full-time, Remote"
-                      className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
+                      className="h-10 transition-all"
                     />
                   </div>
                 </div>
 
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="location" className="text-sm font-semibold">
-                    Job Location
-                  </Label>
-                  <Input
-                    id="location"
-                    name="location"
-                    placeholder="City name or Remote"
-                    className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
-                  />
+                <div className="grid sm:grid-cols-2 gap-4 lg:gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="location" className="text-sm font-medium">
+                      Job Location
+                    </Label>
+                    <Input
+                      id="location"
+                      name="location"
+                      placeholder="City name or Remote"
+                      className="h-10 transition-all"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="skills" className="text-sm font-medium">
+                      Required Skills
+                    </Label>
+                    <Input
+                      id="skills"
+                      name="skills"
+                      placeholder="React, TypeScript, Node.js"
+                      className="h-10 transition-all"
+                    />
+                  </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="skills" className="text-sm font-semibold">
-                    Required Skills
-                  </Label>
-                  <Input
-                    id="skills"
-                    name="skills"
-                    placeholder="React, TypeScript, Node.js (comma separated)"
-                    className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
-                  />
-                </div>
-              </div>
-                <div className="grid md:grid-cols-3 gap-6">
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="salary" className="text-sm font-semibold flex items-center gap-2">
-                      <DollarSign className="h-4 w-4" />
+                    <Label htmlFor="salary" className="text-sm font-medium flex items-center gap-1.5">
+                      <DollarSign className="h-3.5 w-3.5 text-muted-foreground" />
                       Salary Range
                     </Label>
                     <Input
                       id="salary"
                       name="salary"
                       placeholder="e.g., $120k - $150k"
-                      className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
+                      className="h-10 transition-all"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="deadline" className="text-sm font-semibold flex items-center gap-2">
-                      <Calendar className="h-4 w-4" />
-                      Application Deadline
+                    <Label htmlFor="deadline" className="text-sm font-medium flex items-center gap-1.5">
+                      <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                      Deadline
                     </Label>
                     <Input
                       id="deadline"
                       name="deadline"
                       type="date"
-                      className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
+                      className="h-10 transition-all"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="fees" className="text-sm font-semibold">
+                    <Label htmlFor="fees" className="text-sm font-medium">
                       Application Fee
                     </Label>
                     <Input
@@ -318,7 +324,7 @@ const CreateJob = () => {
                       type="number"
                       min={0}
                       placeholder="0"
-                      className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
+                      className="h-10 transition-all"
                     />
                   </div>
                 </div>
@@ -326,20 +332,20 @@ const CreateJob = () => {
             </Card>
 
             {/* Screening Questions */}
-            <Card className="shadow-elegant border-border/50 hover:shadow-glow transition-all duration-300 animate-fade-in">
-              <CardHeader className="border-b border-border/50">
-                <CardTitle className="text-2xl">Screening Questions</CardTitle>
-                <CardDescription>Ask candidates key questions to filter applications</CardDescription>
+            <Card className="border-border/50 shadow-sm hover:shadow-md transition-all duration-300 animate-fade-in">
+              <CardHeader className="border-b border-border/30 pb-4">
+                <CardTitle className="text-lg sm:text-xl">Screening Questions</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">Ask candidates key questions to filter applications</CardDescription>
               </CardHeader>
-              <CardContent className="pt-6 space-y-4">
+              <CardContent className="pt-5 lg:pt-6 space-y-4">
                 {screeningQuestions.map((question, index) => (
-                  <div key={index} className="flex gap-3 items-start">
+                  <div key={index} className="flex gap-2 sm:gap-3 items-start">
                     <div className="flex-1">
                       <Input
                         placeholder={`Question ${index + 1}`}
                         value={question}
                         onChange={(e) => updateQuestion(index, e.target.value)}
-                        className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
+                        className="h-10 transition-all"
                       />
                     </div>
                     {screeningQuestions.length > 1 && (
@@ -348,7 +354,7 @@ const CreateJob = () => {
                         variant="outline"
                         size="icon"
                         onClick={() => removeQuestion(index)}
-                        className="shrink-0 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50"
+                        className="h-10 w-10 shrink-0 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50"
                       >
                         <X className="h-4 w-4" />
                       </Button>
@@ -359,7 +365,7 @@ const CreateJob = () => {
                   type="button"
                   variant="outline"
                   onClick={addQuestion}
-                  className="gap-2 border-primary/20 hover:border-primary/40 hover:bg-primary/5"
+                  className="gap-2 h-10 border-primary/20 hover:border-primary hover:bg-primary/5 hover:text-primary"
                 >
                   <Plus className="h-4 w-4" />
                   Add Question
@@ -368,15 +374,15 @@ const CreateJob = () => {
             </Card>
 
             {/* Hiring Criteria */}
-            <Card className="shadow-elegant border-border/50 hover:shadow-glow transition-all duration-300 animate-fade-in">
-              <CardHeader className="border-b border-border/50">
-                <CardTitle className="text-2xl">AI Matching Criteria</CardTitle>
-                <CardDescription>Configure how candidates will be scored</CardDescription>
+            <Card className="border-border/50 shadow-sm hover:shadow-md transition-all duration-300 animate-fade-in">
+              <CardHeader className="border-b border-border/30 pb-4">
+                <CardTitle className="text-lg sm:text-xl">AI Matching Criteria</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">Configure how candidates will be scored</CardDescription>
               </CardHeader>
-              <CardContent className="pt-6">
-                <div className="grid md:grid-cols-2 gap-6">
+              <CardContent className="pt-5 lg:pt-6">
+                <div className="grid sm:grid-cols-2 gap-4 lg:gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="skillsWeight" className="text-sm font-semibold">
+                    <Label htmlFor="skillsWeight" className="text-sm font-medium">
                       Skills Matching Weight (%)
                     </Label>
                     <Input
@@ -386,11 +392,11 @@ const CreateJob = () => {
                       placeholder="e.g., 40"
                       min={0}
                       max={100}
-                      className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
+                      className="h-10 transition-all"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="experienceWeight" className="text-sm font-semibold">
+                    <Label htmlFor="experienceWeight" className="text-sm font-medium">
                       Experience Weight (%)
                     </Label>
                     <Input
@@ -400,27 +406,39 @@ const CreateJob = () => {
                       placeholder="e.g., 30"
                       min={0}
                       max={100}
-                      className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
+                      className="h-10 transition-all"
                     />
                   </div>
                 </div>
               </CardContent>
             </Card>
+
             {/* Action Buttons */}
-            <div className="flex gap-4 justify-end pt-4">
+            <div className="flex flex-col-reverse sm:flex-row gap-3 justify-end pt-4">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => navigate("/dashboard")}
-                className="px-8 hover:bg-red-500"
+                className="h-11 px-6 sm:px-8"
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
                 disabled={isLoading || !selectedDepartment || !jobTitle}
+                className="h-11 px-6 sm:px-8 gap-2"
               >
-                {isLoading ? "Creating..." : "Create Job Posting"}
+                {isLoading ? (
+                  <>
+                    <div className="h-4 w-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-4 w-4" />
+                    Create Job Posting
+                  </>
+                )}
               </Button>
             </div>
           </form>
@@ -431,6 +449,7 @@ const CreateJob = () => {
               <div className="max-w-2xl w-full">
                 <LinkedInPostPreview
                   jobTitle={jobTitle || "New Position"}
+                  applyLink={linkToShare}
                   onClose={() => setShowLinkedInGenerator(false)}
                 />
               </div>
@@ -443,18 +462,19 @@ const CreateJob = () => {
             onClose={() => setIsModalOpen(false)}
             link={linkToShare}
           />
-          <div className="my-3">
-              {/* LinkedIn Post Generator */}
-            <Card className="shadow-elegant border-border/50 hover:shadow-accent transition-all duration-300 animate-fade-in bg-gradient-to-br from-card to-accent/5">
-              <CardContent className="pt-6">
-                <div className="flex items-start gap-4">
-                  <div className="p-3 bg-gradient-accent rounded-lg shrink-0">
-                    <Sparkles className="h-6 w-6 text-accent-foreground" />
+
+          {/* LinkedIn Post Generator */}
+          <div className="mt-5 lg:mt-6">
+            <Card className="border-accent/30 shadow-sm hover:shadow-md transition-all duration-300 animate-fade-in bg-gradient-to-br from-card to-accent/5">
+              <CardContent className="p-4 sm:p-5 lg:p-6">
+                <div className="flex flex-col sm:flex-row items-start gap-4">
+                  <div className="p-2.5 bg-accent/10 rounded-xl border border-accent/20 shrink-0">
+                    <Sparkles className="h-5 w-5 text-accent" />
                   </div>
                   <div className="flex-1 space-y-3">
                     <div>
-                      <h3 className="font-semibold text-lg">Share on LinkedIn</h3>
-                      <p className="text-muted-foreground text-sm">
+                      <h3 className="font-semibold text-base sm:text-lg">Share on LinkedIn</h3>
+                      <p className="text-muted-foreground text-xs sm:text-sm mt-1">
                         Generate an AI-powered post to attract top talent on LinkedIn
                       </p>
                     </div>
@@ -462,11 +482,11 @@ const CreateJob = () => {
                       type="button"
                       onClick={() => setShowLinkedInGenerator(true)}
                       variant="outline"
-                      className="border-accent/30 hover:border-accent hover:bg-accent/10 text-accent hover:text-accent"
+                      className="h-10 gap-2 border-accent/30 hover:border-accent hover:bg-accent/10 text-accent hover:text-accent w-full sm:w-auto"
                       disabled={!jobCreated || !linkedinConnected}
                     >
-                      <Sparkles className="h-4 w-4 mr-2" />
-                      { linkedinConnected ? "Generate LinkedIn Post" : "LinkedIn not connected" }
+                      <Sparkles className="h-4 w-4" />
+                      {linkedinConnected ? "Generate LinkedIn Post" : "LinkedIn not connected"}
                     </Button>
                   </div>
                 </div>

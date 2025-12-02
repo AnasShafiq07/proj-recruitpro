@@ -49,7 +49,9 @@ def create_linkedin_post(db: Session, apply_link:str, hr_id: int, caption: str =
     token = get_linkedin_token(db, hr_id)
     if not token:
         raise HTTPException(status_code=401, detail="HR Manager not authenticated with LinkedIn")
-
+    
+    caption = f"{caption}\n\nApply here: {apply_link}"
+    
     headers = {
         "Authorization": f"Bearer {token.access_token}",
         "Content-Type": "application/json",

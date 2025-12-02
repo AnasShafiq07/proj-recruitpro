@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, Form, Request
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, Form, File, Request
+from typing import Optional
 from fastapi.responses import RedirectResponse
 import requests
 from sqlalchemy.orm import Session
@@ -94,6 +95,11 @@ def auth_status(db: Session = Depends(get_db), hr: HRManager = Depends(get_curre
 
 
 @router.post("/post/")
-async def post_to_linkedin(apply_link: str,caption: str = Form(...), image: UploadFile = None,
-    db: Session = Depends(get_db), hr: HRManager = Depends(get_current_hr)):
+async def post_to_linkedin(
+    apply_link: str = Form(...),
+    caption: str = Form(...),
+    image: Optional[UploadFile] = File(None),
+    db: Session = Depends(get_db),
+    hr: HRManager = Depends(get_current_hr),
+):
     return create_linkedin_post(db, apply_link, hr.id, caption, image)
