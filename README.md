@@ -1,4 +1,5 @@
-RecruitPro - A Smart Hiring Platform An AI-powered recruitment system featuring AI-generated job posts, LinkedIn integration, semantic resume parsing, and automated interview scheduling. Built with FastAPI, React, and PostgreSQL.
+RecruitPro 
+
 
 Website Link: https://recruitpro-ai-hub.vercel.app/
 
