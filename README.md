@@ -2,14 +2,15 @@ RecruitPro - A Smart Hiring Platform An AI-powered recruitment system featuring 
 
 Website Link: https://recruitpro-ai-hub.vercel.app/
 
-# Project Setup Guide
+
+# Project Setup Guide:
 Clone Repository
 ```
   git clone https://github.com/AnasShafiq07/proj-recruitpro.git
   cd proj-recruitpro
 ```
 
-## Backend Setup (FastAPI)
+## Backend Setup (FastAPI):
 1. Go to folder:
 ```
   cd Backend
@@ -35,7 +36,7 @@ Clone Repository
    uvicorn app.main:app --reload
 ```
 
-## Frontend Setup (React)
+## Frontend Setup (React):
 1. Go to project's root folder:
 ```
   cd Frontend/app
