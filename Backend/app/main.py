@@ -9,6 +9,7 @@ from app.routers import analyzer_router, auth_router, candidate_router, company_
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="RecruitPro API")
+
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 
