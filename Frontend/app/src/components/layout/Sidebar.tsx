@@ -86,7 +86,7 @@ export const Sidebar = () => {
           <span className="font-medium text-sm">{item.label}</span>
         </div>
         {isActive && (
-          <ChevronRight className="h-4 w-4 text-blue-600 animate-in slide-in-from-left-2 duration-300" />
+          <ChevronRight className="h-4 w-4 text-blue-600 " />
         )}
       </Link>
     );

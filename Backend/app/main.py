@@ -14,7 +14,8 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 
 origins = [
-    "http://localhost:8081"
+    "http://localhost:8081",
+    "http://localhost:8082",
 ]
 
 app.add_middleware(
