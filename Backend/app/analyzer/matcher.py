@@ -1,4 +1,6 @@
 import os
+import re
+import numpy as np
 from typing import Dict, Any
 
 from sentence_transformers import SentenceTransformer
@@ -9,19 +11,15 @@ from app.db import models
 from app.analyzer.extractor import extract_text
 
 # =====================================
-# ML Model (single instance)
+# ML Model (Upgraded)
 # =====================================
-model = SentenceTransformer("all-MiniLM-L6-v2")
-
+# ✅ Switch to mpnet-base (512 tokens) for better accuracy
+model = SentenceTransformer("all-mpnet-base-v2")
 
 # =====================================
 # Helper: create or get ResumeParsing row
 # =====================================
 def get_or_create_resume_parsing(db: Session, candidate_id: int) -> models.ResumeParsing:
-    """
-    Fetch ResumeParsing for candidate_id if exists,
-    else create a new row with empty sections.
-    """
     parsing = db.query(models.ResumeParsing).filter(
         models.ResumeParsing.candidate_id == candidate_id
     ).first()
@@ -41,19 +39,32 @@ def get_or_create_resume_parsing(db: Session, candidate_id: int) -> models.Resum
     db.refresh(parsing)
     return parsing
 
+# =====================================
+# Helper: Chunking for Long Text
+# =====================================
+def get_long_text_embedding(text: str) -> np.ndarray:
+    """
+    ✅ Splits text into 500-word chunks, embeds them, and averages the result.
+    This solves the 'Truncation' problem.
+    """
+    if not text:
+        return np.zeros((768,)) # Dimension of mpnet-base
+    
+    # Split vaguely by words (approx 400 words fits in 512 tokens)
+    words = text.split()
+    chunk_size = 400
+    chunks = [" ".join(words[i:i + chunk_size]) for i in range(0, len(words), chunk_size)]
+    
+    # Embed all chunks
+    embeddings = model.encode(chunks)
+    
+    # Average them (Mean Pooling)
+    return np.mean(embeddings, axis=0).reshape(1, -1)
 
 # =====================================
 # MAIN FUNCTION
 # =====================================
 def generate_ai_scores_for_job(db: Session, job_id: int) -> Dict[str, Any]:
-    """
-    For a given job_id:
-    - Fetch all candidates from the DB
-    - Use candidate.resume_url to read their resume
-    - Compute AI score using Job.skills_weight and Job.experience_weight
-    - Save AI score in ResumeParsing.ai_score and Candidate.ai_score
-    """
-
     job = db.query(models.Job).filter(models.Job.job_id == job_id).first()
     if not job:
         return {"error": "job_not_found"}
@@ -67,70 +78,76 @@ def generate_ai_scores_for_job(db: Session, job_id: int) -> Dict[str, Any]:
 
     processed = 0
 
-    # Job embedding
-    job_text = f"{job.title} {job.description or ''} {job.requirements or ''}"
-    job_embedding = model.encode([job_text])
+    # 1. Job Embedding
+    job_full_text = f"{job.title} {job.description or ''} {job.requirements or ''}"
+    job_embedding = get_long_text_embedding(job_full_text)
+    
+    # 2. Extract Required Years from JD (Regex)
+    # Tries to find "3+ years" or "3-5 years" in JD
+    jd_years_match = re.search(r"(\d+)(?:-|\+)?\s*(?:years?|yrs?)", job.requirements or "", re.IGNORECASE)
+    job_years_required = int(jd_years_match.group(1)) if jd_years_match else 1 # Default to 1 if not specified
 
     for candidate in candidates:
-        # ----------------------------
-        # Get resume file path from URL
-        # ----------------------------
         if not candidate.resume_url:
-            print(f"No resume URL for candidate {candidate.candidate_id}")
             continue
 
         filename = os.path.basename(candidate.resume_url)
         file_path = os.path.join("app", "static", "resumes", filename)
 
         if not os.path.exists(file_path):
-            print(f"Resume file not found for candidate {candidate.candidate_id}: {file_path}")
             continue
 
-        # ----------------------------
-        # Extract resume text
-        # ----------------------------
+        # Extract Text
         resume_text = extract_text(file_path) or ""
-
-        # ----------------------------
-        # Get or create ResumeParsing row
-        # ----------------------------
         parsing = get_or_create_resume_parsing(db, candidate_id=candidate.candidate_id)
 
         # ----------------------------
-        # Embeddings
+        # SCORE 1: Semantic Match (The "Vibe" Check)
         # ----------------------------
-        resume_emb = model.encode([resume_text])
-        skills_emb = model.encode([parsing.skills_extracted]) if parsing.skills_extracted else None
-        exp_emb = model.encode([parsing.experience_extracted]) if parsing.experience_extracted else None
-
-        # ----------------------------
-        # Similarity scores (0–1)
-        # ----------------------------
+        resume_emb = get_long_text_embedding(resume_text)
         full_score = float(cosine_similarity(job_embedding, resume_emb)[0][0])
-        skills_score = float(
-            cosine_similarity(model.encode([job.requirements]), skills_emb)[0][0]
-        ) if skills_emb is not None else 0
-        experience_score = float(
-            cosine_similarity(model.encode([job.description]), exp_emb)[0][0]
-        ) if exp_emb is not None else 0
 
         # ----------------------------
-        # FINAL AI SCORE (weighted)
+        # SCORE 2: Skills Match (Vector based on extracted keywords)
         # ----------------------------
+        # We still use vectors here because "Python" ~= "Coding" (semantic)
+        skills_emb = model.encode([parsing.skills_extracted]) if parsing.skills_extracted else np.zeros((1, 768))
+        job_req_emb = model.encode([job.requirements]) if job.requirements else np.zeros((1, 768))
+        skills_score = float(cosine_similarity(job_req_emb, skills_emb)[0][0])
+
+        # ----------------------------
+        # SCORE 3: Experience Match (✅ Math, not Vectors)
+        # ----------------------------
+        try:
+            candidate_years = float(parsing.experience_extracted)
+        except (ValueError, TypeError):
+            candidate_years = 0.0
+            
+        # Logic: If candidate has enough experience, score 1.0. If less, proportional score.
+        if candidate_years >= job_years_required:
+            experience_score = 1.0
+        else:
+            experience_score = candidate_years / job_years_required
+
+        # ----------------------------
+        # FINAL AI SCORE
+        # ----------------------------
+        # Weights (default to 1 if null)
+        w_skill = job.skills_weight or 1
+        w_exp = job.experience_weight or 1
+        
         ai_score = (
-            (job.skills_weight or 0) * skills_score +
-            (job.experience_weight or 0) * experience_score +
-            full_score
-        ) / ((job.skills_weight or 0) + (job.experience_weight or 0) + 1)
+            (w_skill * skills_score) +
+            (w_exp * experience_score) +
+            (1 * full_score) # Base weight for full match
+        ) / (w_skill + w_exp + 1)
 
-        ai_score = round(ai_score * 10000, 2)
+        # Normalize to 0-100 scale (fixing your previous 10000 logic)
+        ai_score = round(max(0, min(ai_score, 1)) * 10000, 2)
 
-        # ----------------------------
-        # Save scores
-        # ----------------------------
         parsing.ai_score = ai_score
         candidate.ai_score = int(ai_score)
-        print(f"Candidate {candidate.candidate_id} AI Score: {ai_score}")
+        
         db.commit()
         processed += 1
 

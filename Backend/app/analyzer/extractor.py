@@ -1,14 +1,14 @@
 import docx2txt
-import PyPDF2
+import pdfplumber  # ✅ Replaces PyPDF2 for better column handling
 from app.analyzer.extractor_nlp import extract_resume_fields
 
 
 def extract_text_from_pdf(file_path: str) -> str:
     text = ""
-    with open(file_path, "rb") as file:
-        reader = PyPDF2.PdfReader(file)
-        for page in reader.pages:
-            page_text = page.extract_text() 
+    # ✅ pdfplumber handles columns (e.g., Skills on left, Work on right) correctly
+    with pdfplumber.open(file_path) as pdf:
+        for page in pdf.pages:
+            page_text = page.extract_text(x_tolerance=1, y_tolerance=1)
             if page_text:
                 text += page_text + "\n"
     return text
