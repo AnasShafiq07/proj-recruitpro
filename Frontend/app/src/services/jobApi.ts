@@ -1,8 +1,9 @@
 
 import type { Department } from "@/utils/types";
 import { getJobById } from "./jobService";
+import { API_CONFIG } from "@/config";
 
-const API_BASE_URL = "http://127.0.0.1:8000";
+const API_BASE_URL = API_CONFIG.BASE_URL;
 
 export interface Job {
   job_id: number;
@@ -25,12 +26,17 @@ export interface Job {
   application_fee: number;
   applicants: number;
   selected: number;
-  deadline: string; // from backend: "2025-11-27T05:00:00"
+  deadline: string; 
   urgent?: boolean;
   created_at?: string;
   slug: string;
 }
 
+export interface Question {
+  question_id: number;
+  form_id: number;
+  question_text: string;
+}
 
 export const jobApi = {
 
@@ -177,6 +183,37 @@ export const jobApi = {
     }
   },
   
+  async getJobQuestions(job_id: number): Promise<Question[]> {
+    const response = await fetch(`${API_BASE_URL}/jobs/questions/${job_id}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${localStorage.getItem("authToken")}`,
+      },
+    });
+
+    if (!response.ok) {
+      console.error("Update failed:", response.status, response.statusText);
+
+      if (response.status === 404) {
+        throw new Error("Job not found");
+      }
+
+      try {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || "Failed to update job");
+      } catch {
+        throw new Error("Failed to update job");
+      }
+    }
+
+    try {
+      return await response.json();
+    } catch {
+      throw new Error("Invalid JSON returned by backend");
+    }
+  },
+
   async update(job_id: number, updatedJob: Partial<Job>): Promise<Job> {
     const response = await fetch(`${API_BASE_URL}/jobs/${job_id}`, {
       method: "PUT",

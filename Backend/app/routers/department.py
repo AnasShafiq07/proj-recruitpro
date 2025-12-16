@@ -82,4 +82,4 @@ def delete_department_endpoint(
     deleted = delete_department(db, department_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Department not found")
-    return None
+    return deleted

@@ -142,7 +142,9 @@ class Job(Base):
     job_id: Mapped[int] = mapped_column(primary_key=True, index=True)
     hr_id: Mapped[int] = mapped_column(ForeignKey("hr_manager.id"))
     company_id: Mapped[int] = mapped_column(ForeignKey("company.company_id"), nullable=True)
-    department_id: Mapped[int] = mapped_column(ForeignKey("department.department_id"), nullable=True) 
+    
+    department_id: Mapped[int] = mapped_column(ForeignKey("department.department_id", ondelete="CASCADE"), nullable=True) 
+    
     title: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=True)
     requirements: Mapped[str] = mapped_column(Text, nullable=True)
@@ -154,15 +156,17 @@ class Job(Base):
     application_fee: Mapped[float] = mapped_column(Float, nullable=True)
     skills_weight: Mapped[float] = mapped_column(Float, nullable=True)
     experience_weight: Mapped[float] = mapped_column(Float, nullable=True)
-    applicants: Mapped[int] = mapped_column(Integer, default=0,nullable=True)
+    applicants: Mapped[int] = mapped_column(Integer, default=0, nullable=True)
     selected: Mapped[int] = mapped_column(Integer, default=0, nullable=True)
     slug: Mapped[str] = mapped_column(String, unique=True, default=lambda: str(uuid.uuid4()))
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc), nullable=True)
 
     hr_manager: Mapped["HRManager"] = relationship(back_populates="jobs")
     company: Mapped["Company"] = relationship(back_populates="jobs")
+    
     department: Mapped["Department"] = relationship(back_populates="jobs") 
     question_form: Mapped["QuestionsForm"] = relationship(back_populates="job")
+    candidates: Mapped[List["Candidate"]] = relationship(back_populates="job", cascade="all, delete-orphan")
 
 
 class Department(Base):
@@ -173,7 +177,7 @@ class Department(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc), nullable=True)
     
     company: Mapped["Company"] = relationship(back_populates="departments")
-    jobs: Mapped[List["Job"]] = relationship(back_populates="department")
+    jobs: Mapped[List["Job"]] = relationship(back_populates="department", cascade="all, delete-orphan")
 
 
 class QuestionsForm(Base):
@@ -201,7 +205,10 @@ class Candidate(Base):
     __tablename__ = "candidate"
 
     candidate_id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    job_id: Mapped[int] = mapped_column(ForeignKey("job.job_id"))
+    
+    # 1. Update ForeignKey to Cascade delete at DB level
+    job_id: Mapped[int] = mapped_column(ForeignKey("job.job_id", ondelete="CASCADE")) 
+    
     company_id: Mapped[int] = mapped_column(ForeignKey("company.company_id"), nullable=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
     email: Mapped[str] = mapped_column(String, unique=False, nullable=False)
@@ -212,16 +219,17 @@ class Candidate(Base):
     education: Mapped[str] = mapped_column(Text, nullable=True)
     resume_url: Mapped[str] = mapped_column(String)
     selected_for_interview: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
-    interview_scheduled: Mapped[bool] = mapped_column(Boolean, default=False,nullable=True)
+    interview_scheduled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
     selected: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
-    ai_score: Mapped[int] = mapped_column(Integer, default=0,nullable=True)
+    ai_score: Mapped[int] = mapped_column(Integer, default=0, nullable=True)
     meet_link: Mapped[str] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc), nullable=True)
+    
     notifications: Mapped[list["Notification"]] = relationship(back_populates="candidate")
     answers: Mapped[list["Answer"]] = relationship(back_populates="candidate", cascade="all, delete-orphan")
     resume_parsing: Mapped["ResumeParsing"] = relationship(back_populates="candidate", uselist=False)
     company: Mapped["Company"] = relationship(back_populates="candidates")
-
+    job: Mapped["Job"] = relationship(back_populates="candidates")
 
 class Answer(Base):
     __tablename__ = "answer"

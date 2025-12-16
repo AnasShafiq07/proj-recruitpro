@@ -3,16 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { CheckCircle2, XCircle, Calendar, Mail, Video } from "lucide-react";
-import { stat } from "node:fs/promises";
-
-
-const API_BASE_URL = "http://127.0.0.1:8000";
-
-interface GoogleAuthStatus {
-  authenticated: boolean;
-  expires_at?: string;
-  hr_id?: number;
-}
+import { googleApi, type GoogleAuthStatus } from "@/services/googleApi"; 
 
 export const GoogleAccountCard = () => {
   const [status, setStatus] = useState<GoogleAuthStatus | null>(null);
@@ -22,21 +13,8 @@ export const GoogleAccountCard = () => {
   const fetchStatus = async () => {
     try {
       setLoading(true);
-      const authToken = localStorage.getItem('authToken');
-      const response = await fetch("http://localhost:8000/google/auth/status", {
-        method: "GET",
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-        },
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        console.log(data);
-        setStatus(data);
-      } else {
-        setStatus({ authenticated: false });
-      }
+      const data = await googleApi.getStatus();
+      setStatus(data);
     } catch (error) {
       console.error("Error fetching Google auth status:", error);
       setStatus({ authenticated: false });
@@ -50,20 +28,19 @@ export const GoogleAccountCard = () => {
   }, []);
 
   const handleConnect = async () => {
-  const token = localStorage.getItem("authToken");
-
-  const response = await fetch(`${API_BASE_URL}/google/auth/login`, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${token}`,
-    },
-  });
-
-  const data = await response.json();
-  window.location.href = data.redirect_url;
-};
-
+    try {
+      const data = await googleApi.initiateLogin();
+      // Redirect the user to Google
+      window.location.href = data.redirect_url;
+    } catch (error) {
+      console.error("Login failed", error);
+      toast({
+        title: "Connection Failed",
+        description: "Could not initiate Google login. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   if (loading) {
     return (

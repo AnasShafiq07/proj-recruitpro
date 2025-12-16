@@ -1,5 +1,7 @@
-const API_BASE_URL = "http://127.0.0.1:8000/candidates";
- // candidatesApi
+import { API_CONFIG } from "@/config";
+
+const API_BASE_URL = API_CONFIG.BASE_URL;
+
 export interface Candidate {
   candidate_id: number;
   job_id: number;
@@ -26,7 +28,7 @@ export interface Candidate {
 export const candidateApi = {
 
   async getTotalApplied(): Promise<Candidate[]> {
-    const response = await fetch(`${API_BASE_URL}`, {
+    const response = await fetch(`${API_BASE_URL}/candidates`, {
       method: "GET", 
       headers: {
         "Content-Type": "application/json",
@@ -43,7 +45,7 @@ export const candidateApi = {
 
   async getAll(job_id: number): Promise<Candidate[]> {
     job_id = 2;
-    const response = await fetch(`${API_BASE_URL}/by-job/${job_id}`, {
+    const response = await fetch(`${API_BASE_URL}/candidates/by-job/${job_id}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -60,7 +62,7 @@ export const candidateApi = {
   },
 
   async getByJob(job_id: number): Promise<Candidate[]> {
-    const response = await fetch(`${API_BASE_URL}/filter/selected-for-interview/${job_id}`, {
+    const response = await fetch(`${API_BASE_URL}/candidates/filter/selected-for-interview/${job_id}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -114,7 +116,7 @@ export const candidateApi = {
   },
 
   async final_selection(candidate_id: number) {
-    const response = await fetch(`${API_BASE_URL}/select/${candidate_id}`, {
+    const response = await fetch(`${API_BASE_URL}/candidates/select/${candidate_id}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -129,7 +131,7 @@ export const candidateApi = {
     return await response.json();
   },
   async de_select(candidate_id: number) {
-    const response = await fetch(`${API_BASE_URL}/de-select/${candidate_id}`, {
+    const response = await fetch(`${API_BASE_URL}/candidates/de-select/${candidate_id}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",

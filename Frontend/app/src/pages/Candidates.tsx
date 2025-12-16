@@ -20,7 +20,20 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { type Candidate, candidateApi } from "@/services/candidatesApi";
-import { Search, Download, CalendarCheck, Filter, Users, TrendingUp, CheckCircle2, Clock, Link } from "lucide-react";
+import { 
+  Search, 
+  Download, 
+  CalendarCheck, 
+  Filter, 
+  Users, 
+  TrendingUp, 
+  CheckCircle2, 
+  Clock, 
+  Link, 
+  ArrowUpDown, // Icon for default
+  ArrowUp,     // Icon for ascending
+  ArrowDown    // Icon for descending
+} from "lucide-react";
 import { toast } from "sonner";
 import { useSearchParams } from "react-router-dom";
 import { useEffect, useState } from "react";
@@ -28,6 +41,7 @@ import { useNavigate } from "react-router-dom";
 import { schedulingApi } from "@/services/schedulingApi";
 import { availabilityApi } from "@/services/avalibilityApi";
 import { jobApi } from "@/services/jobApi";
+import { googleApi, type GoogleAuthStatus } from "@/services/googleApi";
 import {
   Select,
   SelectContent,
@@ -59,8 +73,25 @@ const Candidates = () => {
   const [scheduleDescription, setScheduleDescription] = useState("");
   const [isScheduling, setIsScheduling] = useState(false);
   const [availability, setAvailability] = useState(false);
+  const [googleAuthenticated, setGoogleAuthenticated] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  
+  // Filters and Sorting States
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [sortOrder, setSortOrder] = useState<string>("default"); // default, asc, desc
+
+  useEffect(()=> {
+    const fetchStatus = async () => {
+      try {
+      const data: GoogleAuthStatus = await googleApi.getStatus();
+      setGoogleAuthenticated(data.authenticated);
+    }
+    catch (err) {
+      console.error("Failed to fetch google authenticated status:", err);
+    }
+    }
+    fetchStatus();
+  })
 
   useEffect(() => {
     const paramValue = searchParams.get("job");
@@ -165,22 +196,42 @@ const Candidates = () => {
     });
   };
 
-  // Filter candidates based on search and status
-  const filteredCandidates = candidates.filter((candidate) => {
-    const matchesSearch =
-      searchQuery === "" ||
-      candidate.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      candidate.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      candidate.education.toLowerCase().includes(searchQuery.toLowerCase());
+  // Helper function to toggle sort from table header click
+  const toggleSort = () => {
+    if (sortOrder === "default") setSortOrder("desc");
+    else if (sortOrder === "desc") setSortOrder("asc");
+    else setSortOrder("default");
+  };
 
-    const matchesStatus =
-      statusFilter === "all" ||
-      (statusFilter === "selected" && candidate.selected === true) ||
-      (statusFilter === "pending" && candidate.selected !== true) ||
-      (statusFilter === "interviewed" && candidate.interview_scheduled === true);
+  // Processing: Filter -> Sort
+  const processedCandidates = candidates
+    .filter((candidate) => {
+      const matchesSearch =
+        searchQuery === "" ||
+        candidate.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        candidate.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        candidate.education.toLowerCase().includes(searchQuery.toLowerCase());
 
-    return matchesSearch && matchesStatus;
-  });
+      const matchesStatus =
+        statusFilter === "all" ||
+        (statusFilter === "selected" && candidate.selected === true) ||
+        (statusFilter === "pending" && candidate.selected !== true) ||
+        (statusFilter === "interviewed" && candidate.interview_scheduled === true);
+
+      return matchesSearch && matchesStatus;
+    })
+    .sort((a, b) => {
+      if (sortOrder === "default") return 0;
+      
+      const scoreA = a.ai_score || 0;
+      const scoreB = b.ai_score || 0;
+
+      if (sortOrder === "asc") {
+        return scoreA - scoreB; // Ascending (Low to High)
+      } else {
+        return scoreB - scoreA; // Descending (High to Low)
+      }
+    });
 
   // Stats calculations
   const totalCandidates = candidates.length;
@@ -216,14 +267,19 @@ const Candidates = () => {
                   <Button
                     className="gap-2"
                     onClick={handleScheduleAllClick}
-                    disabled={!availability}
+                    disabled={!availability || !googleAuthenticated}
                   >
                     <CalendarCheck className="h-4 w-4" />
                     Schedule All Interviews
                   </Button>
                   {!availability && (
                     <span className="ml-2 text-xs text-destructive mt-1">
-                      Add or select availability first
+                      Availabilty not selected
+                    </span>
+                  )}
+                  {!googleAuthenticated && (
+                    <span className="ml-2 text-xs text-destructive mt-1">
+                      Google account not connected
                     </span>
                   )}
                 </div>
@@ -247,6 +303,18 @@ const Candidates = () => {
                   </div>
                 </div>
               </div>
+              
+               <div className="bg-background rounded-lg border border-border p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground font-medium">Interviewed</p>
+                    <p className="text-2xl font-bold text-foreground mt-1">{interviewedCandidates}</p>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-info/10 flex items-center justify-center">
+                    <Clock className="h-6 w-6 text-info" />
+                  </div>
+                </div>
+              </div>
 
               <div className="bg-background rounded-lg border border-border p-4">
                 <div className="flex items-center justify-between">
@@ -256,18 +324,6 @@ const Candidates = () => {
                   </div>
                   <div className="h-12 w-12 rounded-full bg-success/10 flex items-center justify-center">
                     <CheckCircle2 className="h-6 w-6 text-success" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-background rounded-lg border border-border p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground font-medium">Interviewed</p>
-                    <p className="text-2xl font-bold text-foreground mt-1">{interviewedCandidates}</p>
-                  </div>
-                  <div className="h-12 w-12 rounded-full bg-info/10 flex items-center justify-center">
-                    <Clock className="h-6 w-6 text-info" />
                   </div>
                 </div>
               </div>
@@ -289,7 +345,7 @@ const Candidates = () => {
 
         {/* Main Content */}
         <div className="px-8 py-6">
-          {/* Search and Filter Bar */}
+          {/* Search, Sort and Filter Bar */}
           <div className="bg-card rounded-lg border border-border p-4 mb-6">
             <div className="flex gap-4">
               <div className="flex-1 relative">
@@ -301,6 +357,21 @@ const Candidates = () => {
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
+
+              {/* NEW: Sorting Dropdown */}
+              <Select value={sortOrder} onValueChange={setSortOrder}>
+                <SelectTrigger className="w-[180px] bg-background">
+                  <ArrowUpDown className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="Sort by Score" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="default">Default</SelectItem>
+                  <SelectItem value="desc">Score: High to Low</SelectItem>
+                  <SelectItem value="asc">Score: Low to High</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Status Filter Dropdown */}
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-[200px] bg-background">
                   <Filter className="h-4 w-4 mr-2" />
@@ -324,7 +395,18 @@ const Candidates = () => {
                   <TableHead className="font-semibold">Candidate</TableHead>
                   <TableHead className="font-semibold">Contact Information</TableHead>
                   <TableHead className="font-semibold">Education</TableHead>
-                  <TableHead className="font-semibold">AI Match Score</TableHead>
+                  {/* Table Header also allows clicking to sort */}
+                  <TableHead 
+                    className="font-semibold cursor-pointer hover:bg-muted/80 transition-colors select-none"
+                    onClick={toggleSort}
+                  >
+                    <div className="flex items-center gap-2">
+                      AI Match Score
+                      {sortOrder === "asc" && <ArrowUp className="h-4 w-4 text-primary" />}
+                      {sortOrder === "desc" && <ArrowDown className="h-4 w-4 text-primary" />}
+                      {sortOrder === "default" && <ArrowUpDown className="h-4 w-4 text-muted-foreground" />}
+                    </div>
+                  </TableHead>
                   <TableHead className="font-semibold">Status</TableHead>
                   <TableHead className="font-semibold">Interview</TableHead>
                   <TableHead className="font-semibold">Applied Date</TableHead>
@@ -332,7 +414,7 @@ const Candidates = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredCandidates.length === 0 ? (
+                {processedCandidates.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={8} className="text-center py-12">
                       <div className="flex flex-col items-center justify-center text-muted-foreground">
@@ -343,7 +425,7 @@ const Candidates = () => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredCandidates.map((candidate) => (
+                  processedCandidates.map((candidate) => (
                     <TableRow key={candidate.candidate_id} className="hover:bg-muted/30">
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-3">

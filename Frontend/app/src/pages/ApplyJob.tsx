@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { useParams } from "react-router-dom";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   Card,
   CardContent,
@@ -21,71 +22,73 @@ import {
   Loader2,
 } from "lucide-react";
 
-interface Question {
-  question_id: number;
-  question_text: string;
-}
-
-interface Job {
-  job_id: number;
-  company_id: number;
-  title: string;
-  description?: string;
-  requirements?: string;
-  location?: string;
-  salary_range?: string;
-  deadline?: string;
-  application_fee?: number;
-  department_id?: number;
-}
-
-interface JobResponse {
-  job: Job;
-  questions: Question[];
-}
+// Import the API service
+import { applicationApi } from "@/services/applyJobApi";
 
 const ApplyJob = () => {
   const { slug } = useParams<{ slug: string }>();
   const { toast } = useToast();
 
-  const [jobData, setJobData] = useState<JobResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [answers, setAnswers] = useState<Record<number, string>>({});
-  const [isDeadlineEnded, setIsDeadlineEnded] = useState<boolean>(false);
 
-  useEffect(() => {
-    const fetchJobDetails = async () => {
-      try {
-        const response = await fetch(`http://127.0.0.1:8000/jobs/url/${slug}`);
+  const { data: jobData, isLoading, error } = useQuery({
+    queryKey: ["public-job", slug],
+    queryFn: ({ signal }) => applicationApi.getJobBySlug(slug!, signal),
+    enabled: !!slug, // Only fetch if slug exists
+    retry: 1,
+  });
 
-        if (!response.ok) throw new Error("Job not found");
+  const isDeadlineEnded = jobData?.job.deadline
+    ? new Date(jobData.job.deadline) < new Date()
+    : false;
 
-        const data: JobResponse = await response.json();
+  const submitMutation = useMutation({
+    mutationFn: async (formData: FormData) => {
+      if (!jobData) throw new Error("Job data missing");
 
-        setJobData(data);
-
-        // ✅ Correct deadline check
-        const deadlineEnded = data.job.deadline
-          ? new Date(data.job.deadline) < new Date()
-          : false;
-
-        setIsDeadlineEnded(deadlineEnded);
-
-      } catch (error: any) {
-        toast({
-          title: "Error!",
-          description: error.message,
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
+      let resumeUrl = "";
+      if (resumeFile) {
+        const uploadRes = await applicationApi.uploadResume(resumeFile);
+        resumeUrl = uploadRes.url || uploadRes.file_url || "";
       }
-    };
 
-    if (slug) fetchJobDetails();
-  }, [slug, toast]);
+      const candidateData = {
+        job_id: jobData.job.job_id,
+        company_id: jobData.job.company_id,
+        name: formData.get("name") as string,
+        email: formData.get("email") as string,
+        phone: (formData.get("phone") as string) || undefined,
+        location: (formData.get("location") as string) || undefined,
+        skills: (formData.get("skills") as string) || undefined,
+        experience: (formData.get("experience") as string) || undefined,
+        education: (formData.get("education") as string) || undefined,
+        resume_url: resumeUrl || undefined,
+        answers: jobData.questions.map((q) => ({
+          question_id: q.question_id,
+          answer_text: answers[q.question_id] || "",
+        })),
+      };
+
+      return await applicationApi.submitApplication(candidateData);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success!",
+        description: "Application submitted successfully.",
+      });
+
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error!",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // --- Event Handlers ---
 
   const handleAnswerChange = (questionId: number, value: string) => {
     setAnswers((prev) => ({ ...prev, [questionId]: value }));
@@ -97,87 +100,13 @@ const ApplyJob = () => {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setIsSubmitting(true);
-
     const formData = new FormData(e.currentTarget);
-    let resumeUrl = "";
-
-    if (resumeFile) {
-      const resumeForm = new FormData();
-      resumeForm.append("file", resumeFile);
-
-      try {
-        const uploadResponse = await fetch(
-          "http://127.0.0.1:8000/upload/resume",
-          {
-            method: "POST",
-            body: resumeForm,
-          }
-        );
-
-        if (!uploadResponse.ok) throw new Error("Failed to upload resume");
-
-        const uploadData = await uploadResponse.json();
-        resumeUrl = uploadData.url || uploadData.file_url;
-
-      } catch (error: any) {
-        toast({
-          title: "Error!",
-          description: error.message,
-          variant: "destructive",
-        });
-        setIsSubmitting(false);
-        return;
-      }
-    }
-
-    const candidateData = {
-      job_id: jobData?.job.job_id,
-      company_id: jobData?.job.company_id,
-      name: formData.get("name"),
-      email: formData.get("email"),
-      phone: formData.get("phone") || undefined,
-      location: formData.get("location") || undefined,
-      skills: formData.get("skills") || undefined,
-      experience: formData.get("experience") || undefined,
-      education: formData.get("education") || undefined,
-      resume_url: resumeUrl || undefined,
-
-      answers:
-        jobData?.questions.map((q) => ({
-          question_id: q.question_id,
-          answer_text: answers[q.question_id] || "",
-        })) || [],
-    };
-
-    try {
-      const response = await fetch("http://127.0.0.1:8000/candidates/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(candidateData),
-      });
-
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.detail || "Failed to submit");
-      }
-
-      toast({
-        title: "Success!",
-        description: "Application submitted successfully.",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error!",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+    submitMutation.mutate(formData);
   };
+
+  // --- Render States ---
 
   if (isLoading)
     return (
@@ -186,7 +115,13 @@ const ApplyJob = () => {
       </div>
     );
 
-  if (!jobData) return null;
+  if (error || !jobData) {
+    return (
+        <div className="min-h-screen bg-background flex items-center justify-center">
+            <p className="text-destructive">Job not found or failed to load.</p>
+        </div>
+    )
+  }
 
   const { job, questions } = jobData;
 
@@ -204,6 +139,7 @@ const ApplyJob = () => {
       </div>
     );
   }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-primary/10">
       {/* Header with Logo */}
@@ -282,16 +218,9 @@ const ApplyJob = () => {
                     <p className="text-xs text-muted-foreground font-medium">
                       Deadline
                     </p>
-
-                    {isDeadlineEnded ? (
-                      <p className="text-sm sm:text-base font-semibold text-red-600">
-                        Ended
-                      </p>
-                    ) : (
-                      <p className="text-sm sm:text-base text-foreground">
+                    <p className="text-sm sm:text-base text-foreground">
                         {new Date(job.deadline).toLocaleDateString()}
-                      </p>
-                    )}
+                    </p>
                   </div>
                 </div>
               )}
@@ -556,10 +485,10 @@ const ApplyJob = () => {
           >
             <Button
               type="submit"
-              disabled={isSubmitting}
+              disabled={submitMutation.isPending}
               className="w-full sm:w-auto order-1 sm:order-2 bg-gradient-to-r from-primary via-accent to-primary hover:opacity-90 transition-all duration-300 shadow-lg hover:shadow-[var(--shadow-glow)] text-base sm:text-lg py-5 sm:py-6"
             >
-              {isSubmitting ? (
+              {submitMutation.isPending ? (
                 <>
                   <Loader2 className="h-5 w-5 animate-spin mr-2" />
                   Submitting Application...

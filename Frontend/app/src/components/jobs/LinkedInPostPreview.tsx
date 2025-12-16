@@ -129,7 +129,7 @@ export const LinkedInPostPreview = ({ jobTitle, applyLink, onClose }: LinkedInPo
                     Drafting content for: <span className="font-medium text-foreground">{jobTitle}</span>
                 </CardDescription>
             </div>
-            <Button variant="ghost" size="icon" onClick={onClose} className="text-muted-foreground hover:text-destructive">
+            <Button variant="ghost" size="icon" onClick={onClose} className="text-muted-foreground hover:bg-transparent hover:text-destructive">
                 <X className="h-5 w-5" />
             </Button>
         </div>

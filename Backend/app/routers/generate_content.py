@@ -107,13 +107,13 @@ async def generate_linkedin_post(request: PromptRequest):
         #print("Starting Pollinations generation...")
         image_base64 = generate_with_pollinations(visual_prompt_for_pollinations)
     else:
-         raise HTTPException(status_code=500, detail="Gemini failed to generate a visual prompt specifically for the image.")
+         raise HTTPException(status_code=500, detail="Pollinations failed to generate a visual prompt specifically for the image.")
 
     if not image_base64:
         raise HTTPException(status_code=500, detail="Image generation failed via Pollinations.ai.")
 
     return GenerationResponse(
-        caption=generated_caption, 
+        caption="generated_caption", 
         image_base64=image_base64
     )
 

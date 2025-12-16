@@ -1,4 +1,6 @@
-const API_BASE_URL = "http://127.0.0.1:8000/generate";
+import { API_CONFIG } from "@/config";
+
+const API_BASE_URL = API_CONFIG.BASE_URL;
 
 export interface PromptRequest {
   prompt: string;
@@ -16,7 +18,7 @@ export const generationApi = {
    * Calls: POST /generate/linkedin_post
    */
   async generateLinkedinPost(data: PromptRequest): Promise<GenerationResponse> {
-    const response = await fetch(`${API_BASE_URL}/linkedin_post`, {
+    const response = await fetch(`${API_BASE_URL}/generate/linkedin_post`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -39,7 +41,7 @@ export const generationApi = {
    * Calls: POST /generate/send-offer-letter
    */
   async sendOfferLetter(data: PromptRequest): Promise<boolean> {
-    const response = await fetch(`${API_BASE_URL}/send-offer-letter`, {
+    const response = await fetch(`${API_BASE_URL}/generate/send-offer-letter`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

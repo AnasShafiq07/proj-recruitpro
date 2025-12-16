@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { authApi } from "@/services/authenticationApi"; 
 
 export const LoginForm = () => {
   const [email, setEmail] = useState("");
@@ -17,40 +18,23 @@ export const LoginForm = () => {
     setIsLoading(true);
 
     try {
-      const formData = new URLSearchParams();
-      formData.append("username", email);
-      formData.append("password", password);
+      const data = await authApi.login(email, password);
 
-      const response = await fetch("http://127.0.0.1:8000/auth/hr/login/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: formData.toString(),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || "Login failed");
-      }
-
-      const data = await response.json();
-      const token = data.access_token;
-      const refresh_token = data.refresh_token;
-
-      localStorage.setItem("authToken", token);
-      localStorage.setItem("refreshToken", refresh_token);
+      localStorage.setItem("authToken", data.access_token);
+      localStorage.setItem("refreshToken", data.refresh_token);
 
       toast({
-        title: "Login successfull!",
+        title: "Login successful!",
         description: "Welcome back to your account.",
       });
+      
       navigate("/dashboard");
 
     } catch (error: any) {
        toast({
         title: "Login failed",
         description: error.message,
+        variant: "destructive",
       });
     } finally {
       setIsLoading(false);

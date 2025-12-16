@@ -1,10 +1,13 @@
-const API_BASE_URL = "http://127.0.0.1:8000/hr-managers";
+import { API_CONFIG } from "@/config";
+
+const API_BASE_URL = API_CONFIG.BASE_URL;
 
 export interface HRManager {
   id: number;
   name: string;
   email: string;
   role: string;
+  password: string | null;
   company_id?: number | null;
   created_at?: string; 
 }
@@ -12,7 +15,7 @@ export interface HRManager {
 export const hrManagerApi = {
   // GET /hr-managers/curr-hr
   async getCurrentHR(): Promise<HRManager> {
-    const response = await fetch(`${API_BASE_URL}/curr-hr`, {
+    const response = await fetch(`${API_BASE_URL}/hr-managers/curr-hr`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -29,7 +32,7 @@ export const hrManagerApi = {
 
   // GET /hr-managers/
   async getAll(): Promise<HRManager[]> {
-    const response = await fetch(`${API_BASE_URL}/`, {
+    const response = await fetch(`${API_BASE_URL}/hr-managers/`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -47,7 +50,7 @@ export const hrManagerApi = {
 
   // GET /hr-managers/{hr_id}
   async getById(hr_id: number): Promise<HRManager> {
-    const response = await fetch(`${API_BASE_URL}/${hr_id}`, {
+    const response = await fetch(`${API_BASE_URL}/hr-managers/${hr_id}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -66,8 +69,8 @@ export const hrManagerApi = {
   },
 
   // POST /hr-managers/
-  async create(data: Partial<HRManager>): Promise<HRManager> {
-    const response = await fetch(`${API_BASE_URL}/`, {
+  async createAdmin(data: Partial<HRManager>): Promise<HRManager> {
+    const response = await fetch(`${API_BASE_URL}/hr-managers/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -84,9 +87,26 @@ export const hrManagerApi = {
     return await response.json();
   },
 
+  async createHr(data: Partial<HRManager>): Promise<HRManager> {
+    console.log(data);
+    const response = await fetch(`${API_BASE_URL}/auth/hr/create-new/`, {
+      method: "POST",
+      headers: {
+        "Content-Type" : "application/json",
+        "Authorization": `Bearer ${localStorage.getItem("authToken")}`,
+      },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Failed to create HR Manager");
+    }
+    return await response.json();
+  },
+
   // PUT /hr-managers/{hr_id}
   async update(hr_id: number, data: Partial<HRManager>): Promise<HRManager> {
-    const response = await fetch(`${API_BASE_URL}/${hr_id}`, {
+    const response = await fetch(`${API_BASE_URL}/hr-managers/${hr_id}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -104,7 +124,7 @@ export const hrManagerApi = {
 
   // DELETE /hr-managers/{hr_id}
   async delete(hr_id: number): Promise<boolean> {
-    const response = await fetch(`${API_BASE_URL}/${hr_id}`, {
+    const response = await fetch(`${API_BASE_URL}/hr-managers/${hr_id}`, {
       method: "DELETE",
       headers: {
         "Authorization": `Bearer ${localStorage.getItem("authToken")}`,

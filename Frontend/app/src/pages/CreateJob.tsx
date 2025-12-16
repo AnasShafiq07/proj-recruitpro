@@ -13,8 +13,8 @@ import { ShareModal } from "@/components/ui/modal";
 import { LinkedInPostPreview } from "@/components/jobs/LinkedInPostPreview";
 import type { Department } from "../utils/types";
 
-
-const API_BASE_URL = "http://127.0.0.1:8000";
+// Import the new API service
+import { jobApi, CreateJobPayload } from "@/services/createJobApi"; // Adjust path as needed
 
 const CreateJob = () => {
   const { toast } = useToast();
@@ -30,40 +30,22 @@ const CreateJob = () => {
   const [linkToShare, setLinkToShare] = useState("");
   const [linkedinConnected, setLinkedinConnected] = useState<boolean>(false);
 
+  // --- API Functions via Service ---
+
   const fetchLinkedInDetails = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/linkedin/auth/status`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-        },
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setLinkedinConnected(data.authenticated);
-      }
+      const data = await jobApi.getLinkedInAuthStatus();
+      setLinkedinConnected(data.authenticated);
     } catch (error) {
-      console.error('Error fetching candidate:', error);
+      console.error('Error fetching LinkedIn status:', error);
+      // Optional: setLinkedinConnected(false);
     }
   }
 
   useEffect(() => {
     const fetchDepartments = async () => {
       try {
-        const response = await fetch("http://127.0.0.1:8000/departments/get/all", {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-          },
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.detail || "Failed to fetch departments!");
-        }
-
-        const data: Department[] = await response.json();
+        const data = await jobApi.getAllDepartments();
         setDepartments(data);
       } catch (error: any) {
         toast({
@@ -72,6 +54,7 @@ const CreateJob = () => {
         });
       }
     };
+
     fetchLinkedInDetails();
     fetchDepartments();
   }, []);
@@ -91,7 +74,8 @@ const CreateJob = () => {
     const formData = new FormData(e.currentTarget);
     const deadline = formData.get("deadline") as string;
 
-    const jobData = {
+    // Construct the payload matching the interface
+    const jobData: CreateJobPayload = {
       department_id: Number(selectedDepartment),
       title: formData.get("title") as string,
       description: (formData.get("description") as string) || undefined,
@@ -113,21 +97,9 @@ const CreateJob = () => {
     };
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/jobs/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-        },
-        body: JSON.stringify(jobData),
-      });
+      // Use the API service to create the job
+      const resData = await jobApi.createJob(jobData);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || "Failed to create job");
-      }
-
-      const resData = await response.json();
       setLinkToShare("http://localhost:8082/apply/" + resData.job_link);
 
       toast({
@@ -419,13 +391,13 @@ const CreateJob = () => {
                 type="button"
                 variant="outline"
                 onClick={() => navigate("/dashboard")}
-                className="h-11 px-6 sm:px-8"
+                className="h-11 px-6 sm:px-8 hover:bg-red-500"
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
-                disabled={isLoading || !selectedDepartment || !jobTitle}
+                disabled={jobCreated || isLoading || !selectedDepartment || !jobTitle}
                 className="h-11 px-6 sm:px-8 gap-2"
               >
                 {isLoading ? (
@@ -435,8 +407,8 @@ const CreateJob = () => {
                   </>
                 ) : (
                   <>
-                    <Plus className="h-4 w-4" />
-                    Create Job Posting
+                    {!jobCreated && <Plus className="h-4 w-4" />}  
+                    {jobCreated ? "Job already created.": "Create job posting"}
                   </>
                 )}
               </Button>

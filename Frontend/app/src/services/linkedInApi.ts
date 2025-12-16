@@ -1,17 +1,15 @@
-// linkedinService.ts
 
-const API_BASE_URL = "http://127.0.0.1:8000";
+import { API_CONFIG } from "@/config";
 
+const API_BASE_URL = API_CONFIG.BASE_URL;
 export interface LinkedInAuthStatus {
   authenticated: boolean;
   urn?: string;
-  expires_at?: string; // or Date depending on how you want to parse it
+  expires_at?: string; 
   hr_id?: number;
 }
 
 export interface LinkedInPostResponse {
-  // Define structure based on what create_linkedin_post returns
-  // Assumed generic object for now
   id?: string;
   url?: string; 
   message?: string;

@@ -1,614 +1,588 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Calendar, 
-  Mail, 
-  Phone, 
-  MapPin, 
-  FileText, 
-  Clock, 
-  CheckCircle, 
-  XCircle, 
-  Award, 
-  Briefcase, 
-  GraduationCap, 
-  Download, 
-  Link as LinkIcon,
-  ChevronLeft,
-  MoreHorizontal,
-  Video,
-  ExternalLink,
-  Loader2,
-  LayoutDashboard,
-  Users,
-  Settings,
-  LogOut,
-  Bell
+  Calendar, Mail, Phone, MapPin, FileText, Clock, 
+  CheckCircle, Award, Briefcase, GraduationCap, 
+  Download, ChevronLeft, Video, ExternalLink, 
+  Loader2, MessageSquare, User, AlertCircle,
+  ArrowUpRight
 } from 'lucide-react';
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 
-
-const API_BASE_URL = "http://127.0.0.1:8000";
+import { candidateViewApi, CandidateWithAnswers } from "@/services/candidateViewApi";
+import { jobApi, Question } from '@/services/jobApi';
 
 const CandidateView = () => {
-  // State from your logic
+  // --- State ---
   const [googleAuthenticated, setGoogleAuthenticated] = useState<boolean>(false);
-  const [candidate, setCandidate] = useState<any>(null);
+  const [candidate, setCandidate] = useState<CandidateWithAnswers | null>(null);
+  const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Modals & Actions
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [showResumeModal, setShowResumeModal] = useState(false);
   const [scheduling, setScheduling] = useState(false);
   const [scheduleSuccess, setScheduleSuccess] = useState(false);
+  
+  // Resume Data
   const [resumeBlobUrl, setResumeBlobUrl] = useState<string | null>(null);
   const [isResumeLoading, setIsResumeLoading] = useState(false);
   
+  // Forms
   const [interviewForm, setInterviewForm] = useState({
-    summary: 'Interview Session',
+    summary: '',
     description: 'Technical Interview Discussion',
     start_time: '',
     end_time: '',
   });
 
-  // --- REAL DATA FETCHING ---
-
+  // --- Effects ---
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    // Defaulting to '1' for demo if no param exists
-    const candidateId = urlParams.get('candidate') || '1'; 
-    fetchCandidateDetails(candidateId);
-    fetchGoogleDetails();
+    const candidateId = urlParams.get('candidate');
+    
+    if(candidateId) {
+      fetchData(candidateId);
+    }
   }, []);
 
-  const fetchGoogleDetails = async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/google/auth/status`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-        },
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setGoogleAuthenticated(data.authenticated);
-      }
-    } catch (error) {
-      console.error('Error fetching google status:', error);
-    }
-  }
+  useEffect(() => {
+    return () => {
+      if (resumeBlobUrl) URL.revokeObjectURL(resumeBlobUrl);
+    };
+  }, [resumeBlobUrl]);
 
-  const fetchCandidateDetails = async (id: string) => {
+  // --- Fetch Logic ---
+  const fetchData = async (id: string) => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/candidates/${id}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-        },
-      });
       
-      if (response.ok) {
-        const data = await response.json();
-        setCandidate(data);
-        // Pre-fill interview form title
-        setInterviewForm(prev => ({
-          ...prev,
-          summary: `Interview with ${data.name}`
-        }));
+      // 1. Fetch Google Auth Status
+      const authData = await candidateViewApi.getGoogleAuthStatus();
+      setGoogleAuthenticated(authData.authenticated);
+
+      // 2. Fetch Candidate
+      const candidateData = await candidateViewApi.getCandidateById(id);
+      setCandidate(candidateData);
+      setInterviewForm(prev => ({ ...prev, summary: `Interview with ${candidateData.name}` }));
+
+      // 3. Fetch Job Questions if job_id exists
+      if (candidateData.job_id) {
+        try {
+          const questionsData = await jobApi.getJobQuestions(candidateData.job_id);
+          setQuestions(questionsData);
+        } catch (err) {
+          console.error("Failed to fetch job questions", err);
+        }
       }
+
     } catch (error) {
-      console.error('Error fetching candidate:', error);
+      console.error('Error fetching data:', error);
     } finally {
       setLoading(false);
     }
   };
 
+  // --- Handlers ---
   const handleScheduleInterview = async () => {
-    if (!interviewForm.start_time || !interviewForm.end_time) {
+    if (!candidate || !interviewForm.start_time || !interviewForm.end_time) {
       alert('Please fill in all required fields');
       return;
     }
 
     setScheduling(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/google/create_event`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-        },
-        body: JSON.stringify({
-          candidate_id: candidate.candidate_id,
-          job_id: candidate.job_id,
-          email: candidate.email,
-          summary: interviewForm.summary,
-          description: interviewForm.description,
-          start_time: new Date(interviewForm.start_time).toISOString(),
-          end_time: new Date(interviewForm.end_time).toISOString(),
-        }),
+      await candidateViewApi.scheduleInterview({
+        candidate_id: candidate.candidate_id,
+        job_id: candidate.job_id,
+        email: candidate.email,
+        summary: interviewForm.summary,
+        description: interviewForm.description,
+        start_time: new Date(interviewForm.start_time).toISOString(),
+        end_time: new Date(interviewForm.end_time).toISOString(),
       });
 
-      if (response.ok) {
-        setScheduleSuccess(true);
-        
-        // Update candidate interview status locally and on backend
-        await fetch(`${API_BASE_URL}/candidates/update/${candidate.candidate_id}`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-          },
-          body: JSON.stringify({ interview_scheduled: true }),
-        });
+      setScheduleSuccess(true);
+      await handleStatusUpdate('interview_scheduled', true);
 
-        // Optimistic update
-        setCandidate((prev: any) => ({ ...prev, interview_scheduled: true }));
+      setTimeout(() => {
+        setShowScheduleModal(false);
+        setScheduleSuccess(false);
+      }, 2000);
 
-        setTimeout(() => {
-          setShowScheduleModal(false);
-          setScheduleSuccess(false);
-          fetchCandidateDetails(candidate.candidate_id);
-        }, 2000);
-      } else {
-        alert('Failed to schedule interview. Please try again.');
-      }
     } catch (error) {
       console.error('Error scheduling interview:', error);
-      alert('Error scheduling interview');
+      alert('Failed to schedule interview. Please try again.');
     } finally {
       setScheduling(false);
     }
   };
 
   const handleStatusUpdate = async (field: string, value: boolean) => {
-    // Optimistic UI update
+    if (!candidate) return;
+    
+    // Optimistic Update
     setCandidate((prev: any) => ({ ...prev, [field]: value }));
 
     try {
-      await fetch(`${API_BASE_URL}/candidates/update/${candidate.candidate_id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-        },
-        body: JSON.stringify({ [field]: value }),
-      });
-      // Re-fetch to ensure sync
-      fetchCandidateDetails(candidate.candidate_id);
+      await candidateViewApi.updateStatus(candidate.candidate_id, { [field]: value });
     } catch (error) {
       console.error('Error updating status:', error);
-      // Revert optimistic update on error
-      setCandidate((prev: any) => ({ ...prev, [field]: !value }));
+      setCandidate((prev: any) => ({ ...prev, [field]: !value })); // Revert
     }
   };
 
-  // Fetch resume logic
-  const fetchResumeBlob = async () => {
-    if (!candidate?.resume_url) {
-      throw new Error('No resume available for this candidate');
-    }
-    
-    setIsResumeLoading(true);
+  const handleOpenResume = async () => {
+    if (!candidate?.resume_url) return alert("No resume URL found.");
     try {
-      const res = await fetch(`${candidate.resume_url}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-        },
-      });
-
-      if (!res.ok) {
-        const text = await res.text().catch(() => null);
-        throw new Error(`Failed to fetch resume (${res.status}) ${text || ''}`);
-      }
-
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      
+      setIsResumeLoading(true);
+      const { url } = await candidateViewApi.getResumeBlob(candidate.resume_url);
       if (resumeBlobUrl) URL.revokeObjectURL(resumeBlobUrl);
       setResumeBlobUrl(url);
-      return { url, blob };
+      setShowResumeModal(true);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to load resume.");
     } finally {
       setIsResumeLoading(false);
     }
   };
 
-  const handleOpenResume = async () => {
+  const handleDownloadResume = async () => {
+    if (!candidate?.resume_url) return;
     try {
-      await fetchResumeBlob();
-      setShowResumeModal(true);
-    } catch (err) {
-      console.error('Error opening resume:', err);
-      alert("Resume not available or failed to load.");
-    }
-  };
-
-  const handleDownload = async () => {
-    try {
-      const { url } = await fetchResumeBlob();
-      const parts = candidate.resume_url.split('/');
-      const fileName = parts[parts.length - 1] || `resume_${candidate.candidate_id}.pdf`;
-
+      const { url } = await candidateViewApi.getResumeBlob(candidate.resume_url);
       const a = document.createElement('a');
       a.href = url;
-      a.download = decodeURIComponent(fileName);
+      a.download = `Resume-${candidate.name.replace(/\s+/g, '_')}.pdf`;
       document.body.appendChild(a);
       a.click();
       a.remove();
     } catch (err) {
-      console.error('Error downloading resume:', err);
-      alert("Resume not available.");
+      console.error(err);
+      alert("Failed to download resume.");
     }
   };
 
-  // Cleanup blob URL
-  useEffect(() => {
-    return () => {
-      if (resumeBlobUrl) {
-        URL.revokeObjectURL(resumeBlobUrl);
-      }
-    };
-  }, [resumeBlobUrl]);
+  // --- Render Helpers ---
+  const getAnswerForQuestion = (qId: number) => {
+    // Ensure answerts exists before trying to find
+    const answer = candidate?.answers?.find(a => a.question_id === qId);
+    return answer ? answer.answer_text : null;
+  };
 
   if (loading) {
     return (
       <DashboardLayout>
-        <div className="h-[calc(100vh-4rem)] flex items-center justify-center">
+        <div className="h-[calc(100vh-4rem)] flex items-center justify-center bg-muted/30">
           <div className="flex flex-col items-center gap-4">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-            <p className="text-gray-500 font-medium">Loading candidate profile...</p>
+            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            <p className="text-muted-foreground font-medium animate-pulse">Loading profile...</p>
           </div>
         </div>
       </DashboardLayout>
     );
   }
 
-  if (!candidate) return (
-    <DashboardLayout>
-      <div className="p-8 flex items-center justify-center h-[calc(100vh-4rem)] text-gray-500">
-        Candidate not found
-      </div>
-    </DashboardLayout>
-  );
+  if (!candidate) return <DashboardLayout><div className="p-8 text-center">Candidate not found</div></DashboardLayout>;
+
+  const aiScore = candidate.ai_score || 0;
+  let scoreColorClass = 'bg-red-50 text-red-700 border-red-200';
+  if (aiScore >= 80) scoreColorClass = 'bg-green-50 text-green-700 border-green-200';
+  else if (aiScore >= 60) scoreColorClass = 'bg-yellow-50 text-yellow-700 border-yellow-200';
+
 
   return (
     <DashboardLayout>
-      <div className="p-6 md:p-8 animate-in fade-in duration-500">
-        <div className="max-w-7xl mx-auto space-y-6">
-          
-          {/* Navigation Header */}
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" className="gap-2 text-gray-500 hover:text-gray-900 pl-0" onClick={() => window.history.back()}>
-              <ChevronLeft className="h-4 w-4" />
-              Back to Candidates
-            </Button>
-          </div>
+      <div className="min-h-screen bg-muted/30 pb-12 animate-in fade-in duration-300">
+        
+        {/* Sticky Header */}
+        <div className="sticky top-0 z-20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b px-6 py-3 flex items-center gap-2">
+           <Button variant="ghost" size="sm" onClick={() => window.history.back()} className="text-muted-foreground hover:text-foreground -ml-2">
+              <ChevronLeft className="h-4 w-4 mr-1" /> Back
+           </Button>
+           <Separator orientation="vertical" className="h-4 mx-2" />
+           <h1 className="text-lg font-semibold text-foreground">{candidate.name}</h1>
+           <Badge variant="outline" className="ml-2 font-normal text-muted-foreground">
+             Applied {new Date(candidate.created_at ?? '').toLocaleDateString()}
+           </Badge>
+        </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="max-w-7xl mx-auto px-6 py-8">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             
-            {/* LEFT COLUMN: Main Profile Info */}
-            <div className="lg:col-span-2 space-y-6">
+            {/* --- LEFT SIDEBAR (Profile & Actions) --- */}
+            <div className="lg:col-span-4 space-y-6 order-2 lg:order-1">
               
-              {/* Header Card */}
-              <Card className="border-l-4 border-l-blue-600 shadow-sm">
-                <CardContent className="p-6">
-                  <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
-                    <div className="flex gap-5">
-                      <Avatar className="h-24 w-24 border-4 border-white shadow-sm">
-                        <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${candidate.name}`} />
-                        <AvatarFallback>{candidate.name?.charAt(0)}</AvatarFallback>
-                      </Avatar>
-                      <div className="space-y-1">
-                        <h1 className="text-2xl font-bold text-gray-900">{candidate.name}</h1>
-                        <div className="flex flex-col gap-1 text-sm text-gray-500">
-                          <div className="flex items-center gap-2">
-                            <Mail className="h-4 w-4" /> {candidate.email}
-                          </div>
-                          {candidate.phone && (
-                            <div className="flex items-center gap-2">
-                              <Phone className="h-4 w-4" /> {candidate.phone}
-                            </div>
-                          )}
-                          {candidate.location && (
-                            <div className="flex items-center gap-2">
-                              <MapPin className="h-4 w-4" /> {candidate.location}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* AI Score Badge */}
+              {/* Hero Profile Card */}
+              <Card className="overflow-hidden border-t-4 border-t-primary shadow-sm relative">
+                <CardContent className="pt-12 px-6 pb-6 text-center">
+                   {/* Avatar & AI Score Overlay */}
+                  <div className="relative inline-block mb-5">
+                    <Avatar className="h-32 w-32 border-4 border-background shadow-xl mx-auto relative z-10">
+                      <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${candidate.name}`} />
+                      <AvatarFallback className="text-4xl bg-primary/10 text-primary">{candidate.name.charAt(0)}</AvatarFallback>
+                    </Avatar>
                     {candidate.ai_score !== null && (
-                      <div className="flex flex-col items-end gap-2">
-                        <div className="bg-blue-50 text-blue-700 px-4 py-2 rounded-xl flex flex-col items-center border border-blue-100">
-                          <span className="text-3xl font-bold tracking-tight">{candidate.ai_score}</span>
-                          <span className="text-xs font-semibold uppercase tracking-wider">AI Match</span>
+                      <div className="absolute -bottom-3 -right-3 z-20 bg-background p-1 rounded-full shadow-sm">
+                        <div className={`flex items-center justify-center h-12 w-12 rounded-full text-sm font-bold border-4 ${scoreColorClass}`}>
+                          {aiScore}%
                         </div>
                       </div>
                     )}
                   </div>
-                </CardContent>
-              </Card>
+                  
+                  <h2 className="text-2xl font-bold text-foreground mb-1">{candidate.name}</h2>
+                  <p className="text-sm text-muted-foreground mb-6 flex items-center justify-center gap-1">
+                    <Briefcase className="h-3 w-3" /> Candidate ID: {candidate.candidate_id}
+                  </p>
 
-              {/* Experience Section */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Briefcase className="h-5 w-5 text-blue-600" />
-                    Work Experience
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="prose prose-sm max-w-none text-gray-600 whitespace-pre-line leading-relaxed">
-                    {candidate.experience || "No experience listed."}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Education Section */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <GraduationCap className="h-5 w-5 text-blue-600" />
-                    Education
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="prose prose-sm max-w-none text-gray-600 whitespace-pre-line leading-relaxed">
-                    {candidate.education || "No education listed."}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Skills Section */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Award className="h-5 w-5 text-blue-600" />
-                    Skills
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-wrap gap-2">
-                    {candidate.skills ? (
-                      typeof candidate.skills === 'string' 
-                        ? candidate.skills.split(',').map((skill: string, idx: number) => (
-                            <Badge key={idx} variant="secondary" className="px-3 py-1 bg-gray-100 text-gray-700 hover:bg-gray-200">
-                              {skill.trim()}
-                            </Badge>
-                          ))
-                        : <span className="text-gray-700">{candidate.skills}</span>
-                    ) : (
-                      <span className="text-gray-500 italic">No skills listed</span>
+                  <div className="space-y-3 text-left bg-muted/50 p-5 rounded-xl border border-border/50 shadow-inner">
+                    <div className="flex items-start gap-3 text-sm">
+                      <Mail className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                      <span className="truncate font-medium" title={candidate.email}>{candidate.email}</span>
+                    </div>
+                    {candidate.phone && (
+                      <div className="flex items-start gap-3 text-sm">
+                        <Phone className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                        <span className="font-medium">{candidate.phone}</span>
+                      </div>
                     )}
+                    {candidate.location && (
+                      <div className="flex items-start gap-3 text-sm">
+                        <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                        <span className="font-medium">{candidate.location}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="mt-6 grid grid-cols-2 gap-3">
+                    <Button variant="outline" className="w-full shadow-sm" onClick={handleOpenResume}>
+                      <FileText className="mr-2 h-4 w-4" /> View CV
+                    </Button>
+                    <Button variant="outline" className="w-full shadow-sm" onClick={handleDownloadResume}>
+                      <Download className="mr-2 h-4 w-4" /> PDF
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Pipeline Action Center */}
+              <Card className="shadow-sm">
+                <CardHeader className="pb-4 border-b">
+                  <CardTitle className="text-base font-semibold flex items-center gap-2">
+                    <ArrowUpRight className="h-4 w-4 text-primary" /> Hiring Pipeline
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="divide-y">
+                    {/* Stage 1: Shortlist */}
+                    <div className={`p-4 flex items-center justify-between transition-colors ${candidate.selected_for_interview ? 'bg-primary/5' : 'hover:bg-muted/50'}`}>
+                      <div className="flex items-center gap-4">
+                         <div className={`h-10 w-10 rounded-full flex items-center justify-center ${candidate.selected_for_interview ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+                           <Award className="h-5 w-5" />
+                         </div>
+                         <div>
+                           <p className="font-medium text-sm">Shortlist Application</p>
+                           <p className="text-xs text-muted-foreground">Mark as qualified</p>
+                         </div>
+                      </div>
+                      <Button size="sm" variant={candidate.selected_for_interview ? "default" : "secondary"} onClick={() => handleStatusUpdate('selected_for_interview', !candidate.selected_for_interview)}>
+                         {candidate.selected_for_interview ? "Shortlisted" : "Select"}
+                      </Button>
+                    </div>
+
+                    {/* Stage 2: Interview */}
+                    <div className={`p-4 transition-colors ${candidate.interview_scheduled ? 'bg-purple-50' : 'hover:bg-muted/50'}`}>
+                       <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className={`h-10 w-10 rounded-full flex items-center justify-center ${candidate.interview_scheduled ? 'bg-purple-600 text-white' : 'bg-muted text-muted-foreground'}`}>
+                            <Video className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-sm">Interview Stage</p>
+                            <p className="text-xs text-muted-foreground">{candidate.interview_scheduled ? 'Scheduled' : 'Not scheduled yet'}</p>
+                          </div>
+                        </div>
+                        <Button size="sm" variant={candidate.interview_scheduled ? "outline" : "secondary"} disabled={!googleAuthenticated} onClick={() => setShowScheduleModal(true)} className={!googleAuthenticated ? "opacity-50 cursor-not-allowed" : ""}>
+                          {candidate.interview_scheduled ? "Reschedule" : "Schedule"}
+                        </Button>
+                      </div>
+                       {candidate.meet_link && (
+                        <div className="ml-14 mt-2">
+                           <a href={candidate.meet_link} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-medium text-purple-700 hover:underline bg-purple-100 px-2 py-1 rounded-md">
+                             <Video className="h-3 w-3" /> Join Google Meet <ExternalLink className="h-3 w-3" />
+                           </a>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Stage 3: Final Decision */}
+                     <div className={`p-4 flex items-center justify-between transition-colors ${candidate.selected ? 'bg-green-50' : 'hover:bg-muted/50'}`}>
+                      <div className="flex items-center gap-4">
+                         <div className={`h-10 w-10 rounded-full flex items-center justify-center ${candidate.selected ? 'bg-green-600 text-white' : 'bg-muted text-muted-foreground'}`}>
+                           <CheckCircle className="h-5 w-5" />
+                         </div>
+                         <div>
+                           <p className="font-medium text-sm">Final Decision</p>
+                           <p className="text-xs text-muted-foreground">{candidate.selected ? 'Offer Accepted' : 'Make offer'}</p>
+                         </div>
+                      </div>
+                      <Button size="sm" variant={candidate.selected ? "default" : "secondary"} className={candidate.selected ? "bg-green-600 hover:bg-green-700" : ""} onClick={() => handleStatusUpdate('selected', !candidate.selected)}>
+                         {candidate.selected ? "Hired" : "Hire Candidate"}
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
             </div>
 
-            {/* RIGHT COLUMN: Actions & Status */}
-            <div className="space-y-6">
-              
-              {/* Actions Card */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Quick Actions</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <Button 
-                    className="w-full justify-start bg-blue-600 hover:bg-blue-700"
-                    disabled={!googleAuthenticated}
-                    onClick={() => setShowScheduleModal(true)}
-                  >
-                    <Calendar className="mr-2 h-4 w-4" />
-                    {googleAuthenticated ? "Schedule Interview" : "Connect Google Calendar"}
-                  </Button>
-                  
-                  <div className="grid grid-cols-2 gap-3">
-                    <Button 
-                      variant="outline" 
-                      className="w-full justify-start"
-                      onClick={handleOpenResume}
-                    >
-                      <FileText className="mr-2 h-4 w-4" />
-                      {isResumeLoading ? 'Loading...' : 'View CV'}
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      className="w-full justify-start"
-                      onClick={handleDownload}
-                    >
-                      <Download className="mr-2 h-4 w-4" />
-                      Download
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+            {/* --- RIGHT CONTENT (Tabs) --- */}
+            <div className="lg:col-span-8 order-1 lg:order-2">
+              <Tabs defaultValue="overview" className="w-full">
+                <TabsList className="grid w-full grid-cols-2 mb-8 p-1 bg-muted/80 backdrop-blur-sm">
+                  <TabsTrigger value="overview" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all">
+                    <User className="h-4 w-4" /> Candidate Overview
+                  </TabsTrigger>
+                  <TabsTrigger value="screening" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all">
+                    <MessageSquare className="h-4 w-4" /> Screening Responses
+                    <Badge variant="secondary" className="ml-1 px-1.5 py-0.5 h-auto min-w-[1.25rem]">{questions.length}</Badge>
+                  </TabsTrigger>
+                </TabsList>
 
-              {/* Pipeline Status */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Hiring Pipeline</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  
-                  {/* Stage 1 */}
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <p className="text-sm font-medium text-gray-900">Shortlisted</p>
-                      <p className="text-xs text-gray-500">Qualified for interview</p>
-                    </div>
-                    <Button
-                      size="icon"
-                      variant={candidate.selected_for_interview ? "default" : "outline"}
-                      className={candidate.selected_for_interview ? "bg-green-600 hover:bg-green-700 h-8 w-8 rounded-full" : "h-8 w-8 rounded-full"}
-                      onClick={() => handleStatusUpdate('selected_for_interview', !candidate.selected_for_interview)}
-                    >
-                      {candidate.selected_for_interview ? <CheckCircle className="h-4 w-4" /> : <MoreHorizontal className="h-4 w-4" />}
-                    </Button>
-                  </div>
+                {/* TAB 1: OVERVIEW */}
+                <TabsContent value="overview" className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                  {/* Experience */}
+                  <Card className="shadow-sm border-l-4 border-l-blue-500">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-3 text-lg">
+                        <div className="p-2 bg-blue-100 rounded-lg text-blue-600"><Briefcase className="h-5 w-5" /></div>
+                        Work Experience
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {candidate.experience ? (
+                        <div className="prose prose-slate prose-sm max-w-none whitespace-pre-line">
+                          {candidate.experience}
+                        </div>
+                      ) : (
+                        <p className="text-muted-foreground italic flex items-center gap-2"><AlertCircle className="h-4 w-4" /> No experience provided.</p>
+                      )}
+                    </CardContent>
+                  </Card>
 
-                  <Separator />
+                  {/* Education */}
+                  <Card className="shadow-sm border-l-4 border-l-purple-500">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-3 text-lg">
+                         <div className="p-2 bg-purple-100 rounded-lg text-purple-600"><GraduationCap className="h-5 w-5" /></div>
+                         Education History
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                       {candidate.education ? (
+                        <div className="prose prose-slate prose-sm max-w-none whitespace-pre-line">
+                          {candidate.education}
+                        </div>
+                      ) : (
+                        <p className="text-muted-foreground italic flex items-center gap-2"><AlertCircle className="h-4 w-4" /> No education details provided.</p>
+                      )}
+                    </CardContent>
+                  </Card>
 
-                  {/* Stage 2 */}
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <p className="text-sm font-medium text-gray-900">Interview</p>
-                      <p className="text-xs text-gray-500">
-                        {candidate.interview_scheduled ? 'Scheduled' : 'Pending scheduling'}
-                      </p>
-                    </div>
-                    <div className={`h-8 w-8 rounded-full flex items-center justify-center ${candidate.interview_scheduled ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'}`}>
-                      {candidate.interview_scheduled ? <Video className="h-4 w-4" /> : <Clock className="h-4 w-4" />}
-                    </div>
-                  </div>
+                  {/* Skills */}
+                  <Card className="shadow-sm border-l-4 border-l-emerald-500">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-3 text-lg">
+                        <div className="p-2 bg-emerald-100 rounded-lg text-emerald-600"><Award className="h-5 w-5" /></div>
+                        Skills & Expertise
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex flex-wrap gap-2">
+                         {candidate.skills ? (
+                            typeof candidate.skills === 'string' 
+                              ? candidate.skills.split(',').map((skill: string, idx: number) => (
+                                  <Badge key={idx} variant="secondary" className="px-3 py-1.5 text-sm bg-muted hover:bg-muted-foreground/20">
+                                    {skill.trim()}
+                                  </Badge>
+                                ))
+                              : <span className="text-foreground">{candidate.skills}</span>
+                          ) : (
+                            <span className="text-muted-foreground italic flex items-center gap-2"><AlertCircle className="h-4 w-4" /> No skills listed</span>
+                          )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
 
-                  {candidate.meet_link && (
-                    <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 mt-2">
-                      <p className="text-xs font-medium text-blue-700 mb-1 flex items-center gap-1">
-                        <Video className="h-3 w-3" /> Google Meet Link
-                      </p>
-                      <a href={candidate.meet_link} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline break-all flex items-center gap-1">
-                        {candidate.meet_link} <ExternalLink className="h-3 w-3" />
-                      </a>
-                    </div>
-                  )}
-
-                  <Separator />
-
-                  {/* Stage 3 */}
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <p className="text-sm font-medium text-gray-900">Final Offer</p>
-                      <p className="text-xs text-gray-500">Select to hire</p>
-                    </div>
-                    <Button
-                      size="icon"
-                      variant={candidate.selected ? "default" : "outline"}
-                      className={candidate.selected ? "bg-green-600 hover:bg-green-700 h-8 w-8 rounded-full" : "h-8 w-8 rounded-full"}
-                      onClick={() => handleStatusUpdate('selected', !candidate.selected)}
-                    >
-                      {candidate.selected ? <CheckCircle className="h-4 w-4" /> : <MoreHorizontal className="h-4 w-4" />}
-                    </Button>
-                  </div>
-
-                </CardContent>
-              </Card>
-
-              {/* Timeline Info */}
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center text-sm text-gray-500 gap-2">
-                    <Clock className="h-4 w-4" />
-                    <span>Applied on {candidate.created_at ? new Date(candidate.created_at).toLocaleDateString() : 'N/A'}</span>
-                  </div>
-                </CardContent>
-              </Card>
-
+                {/* TAB 2: SCREENING QUESTIONS (Timeline Style) */}
+                <TabsContent value="screening" className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+                  <Card className="shadow-sm">
+                    <CardHeader>
+                      <CardTitle>Screening Questionnaire</CardTitle>
+                      <CardDescription>
+                        Review the candidate's responses to the required job questions.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-6 pl-2">
+                      {questions.length > 0 ? (
+                        <div className="space-y-8 border-l-2 border-muted pl-6 ml-4 relative">
+                          {questions.map((q, index) => {
+                            const answer = getAnswerForQuestion(q.question_id);
+                            return (
+                              <div key={q.question_id} className="relative group">
+                                {/* Timeline Dot */}
+                                <div className={`absolute -left-[33px] top-1 h-6 w-6 rounded-full border-4 border-background flex items-center justify-center z-10 transition-colors ${answer ? 'bg-primary' : 'bg-muted-foreground'}`}>
+                                  <span className="text-[10px] font-bold text-primary-foreground">{index + 1}</span>
+                                </div>
+                                
+                                <div className="space-y-3 pt-1">
+                                  <h4 className="text-base font-semibold text-foreground leading-snug">
+                                    {q.question_text}
+                                  </h4>
+                                  {answer ? (
+                                    <div className="bg-muted/40 p-4 rounded-xl text-sm text-foreground leading-relaxed border shadow-sm group-hover:border-primary/30 transition-colors relative">
+                                       <MessageSquare className="h-4 w-4 text-muted-foreground absolute top-4 left-4 opacity-50" />
+                                      <div className="pl-8">{answer}</div>
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center gap-3 text-sm text-amber-700 bg-amber-50/50 p-4 rounded-xl border border-amber-200/60">
+                                      <AlertCircle className="h-5 w-5 shrink-0" />
+                                      <span className="font-medium">Candidate did not provide an answer for this question.</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="text-center py-16 text-muted-foreground bg-muted/20 rounded-xl border-2 border-dashed">
+                          <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-30" />
+                          <h3 className="text-lg font-medium mb-1">No Questions Configured</h3>
+                          <p className="text-sm">There are no screening questions attached to this job position.</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </Tabs>
             </div>
           </div>
         </div>
 
-        {/* Schedule Interview Modal */}
+        {/* --- MODALS --- */}
+
+        {/* Schedule Modal */}
         <Dialog open={showScheduleModal} onOpenChange={setShowScheduleModal}>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>Schedule Interview</DialogTitle>
+          <DialogContent className="sm:max-w-[550px] p-0 overflow-hidden gap-0">
+            <DialogHeader className="p-6 pb-2 bg-muted/30 border-b">
+              <DialogTitle className="flex items-center gap-2"><Calendar className="h-5 w-5 text-primary" /> Schedule Interview</DialogTitle>
+              <CardDescription>Send a Google Calendar invite to {candidate.email}</CardDescription>
             </DialogHeader>
             
             {scheduleSuccess ? (
-              <div className="py-8 flex flex-col items-center justify-center text-center animate-in fade-in zoom-in duration-300">
-                <div className="h-16 w-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-                  <CheckCircle className="h-8 w-8 text-green-600" />
+              <div className="p-12 flex flex-col items-center justify-center text-center animate-in fade-in zoom-in duration-300">
+                <div className="h-20 w-20 bg-green-100/80 rounded-full flex items-center justify-center mb-6 shadow-sm animate-bounce-slow">
+                  <CheckCircle className="h-10 w-10 text-green-600" />
                 </div>
-                <h3 className="text-lg font-bold text-gray-900">Interview Scheduled!</h3>
-                <p className="text-sm text-gray-500 mt-1">
-                  A calendar invitation has been sent to {candidate.email}.
+                <h3 className="text-xl font-bold text-foreground">Interview Scheduled!</h3>
+                <p className="text-muted-foreground mt-2 max-w-xs mx-auto">
+                  The invitation has been successfully sent.
                 </p>
               </div>
             ) : (
-              <div className="space-y-4 py-4">
+              <div className="p-6 space-y-5">
                 <div className="space-y-2">
-                  <Label>Interview Title</Label>
+                  <Label htmlFor="summary" className="font-medium">Event Title</Label>
                   <Input 
+                    id="summary"
                     value={interviewForm.summary} 
                     onChange={(e) => setInterviewForm({...interviewForm, summary: e.target.value})}
+                    className="bg-muted/30"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Description</Label>
+                  <Label htmlFor="description" className="font-medium">Description / Agenda</Label>
                   <Textarea 
+                    id="description"
                     value={interviewForm.description} 
                     onChange={(e) => setInterviewForm({...interviewForm, description: e.target.value})}
-                    rows={3}
+                    rows={4}
+                    className="bg-muted/30 resize-none"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-5">
                   <div className="space-y-2">
-                    <Label>Start Time</Label>
+                    <Label htmlFor="start_time" className="font-medium">Start Time</Label>
                     <Input 
+                      id="start_time"
                       type="datetime-local"
                       value={interviewForm.start_time}
                       onChange={(e) => setInterviewForm({...interviewForm, start_time: e.target.value})}
+                       className="bg-muted/30"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>End Time</Label>
+                    <Label htmlFor="end_time" className="font-medium">End Time</Label>
                     <Input 
+                      id="end_time"
                       type="datetime-local"
                       value={interviewForm.end_time}
                       onChange={(e) => setInterviewForm({...interviewForm, end_time: e.target.value})}
+                       className="bg-muted/30"
                     />
                   </div>
                 </div>
               </div>
             )}
-
             {!scheduleSuccess && (
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setShowScheduleModal(false)}>Cancel</Button>
-                <Button onClick={handleScheduleInterview} disabled={scheduling} className="bg-blue-600 hover:bg-blue-700">
-                  {scheduling ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Scheduling...</> : 'Confirm Schedule'}
-                </Button>
-              </DialogFooter>
+               <DialogFooter className="p-6 pt-2 bg-muted/30 border-t sm:justify-between">
+                  <Button variant="ghost" onClick={() => setShowScheduleModal(false)}>Cancel</Button>
+                  <Button onClick={handleScheduleInterview} disabled={scheduling || !interviewForm.start_time || !interviewForm.end_time} className="min-w-[140px]">
+                    {scheduling ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sending...</> : <><Video className="mr-2 h-4 w-4" /> Send Invite</>}
+                  </Button>
+                </DialogFooter>
             )}
           </DialogContent>
         </Dialog>
 
         {/* Resume Modal */}
         <Dialog open={showResumeModal} onOpenChange={setShowResumeModal}>
-          <DialogContent className="max-w-4xl h-[80vh] flex flex-col p-0 overflow-hidden">
-            <div className="px-6 py-4 border-b flex items-center justify-between">
-              <h3 className="font-semibold text-lg">Resume Preview</h3>
+          <DialogContent className="max-w-6xl h-[90vh] p-0 overflow-hidden flex flex-col bg-background">
+            <div className="px-6 py-3 border-b flex items-center justify-between bg-muted/30">
+               <h3 className="font-semibold text-lg flex items-center gap-2"><FileText className="h-5 w-5" /> Resume Preview</h3>
+               <Button size="sm" variant="outline" onClick={handleDownloadResume} className="shadow-sm">
+                 <Download className="h-4 w-4 mr-2" /> Download PDF
+               </Button>
             </div>
-            <div className="flex-1 bg-gray-100 flex items-center justify-center relative">
+            <div className="flex-1 bg-muted/50 flex items-center justify-center relative p-4">
               {isResumeLoading ? (
-                 <div className="text-gray-500 flex items-center gap-2">
-                   <Loader2 className="h-5 w-5 animate-spin" /> Loading PDF...
+                 <div className="text-muted-foreground flex flex-col items-center gap-3">
+                   <Loader2 className="h-10 w-10 animate-spin text-primary" /> 
+                   <p className="font-medium">Fetching document...</p>
                  </div>
               ) : resumeBlobUrl ? (
-                <iframe 
-                  src={resumeBlobUrl} 
-                  className="w-full h-full" 
-                  title="Resume PDF"
-                />
+                <iframe src={resumeBlobUrl} className="w-full h-full rounded shadow-sm border" title="Resume PDF" />
               ) : (
-                <div className="text-center p-8 bg-white shadow-sm rounded-lg">
-                   <FileText className="h-12 w-12 text-gray-300 mx-auto mb-2" />
-                   <p className="text-gray-500">Unable to load resume preview.</p>
+                <div className="text-center p-12 border-2 border-dashed rounded-xl bg-background/50">
+                   <FileText className="h-16 w-16 text-muted-foreground/50 mx-auto mb-4" />
+                   <h3 className="text-lg font-medium">Unable to load preview</h3>
+                   <p className="text-muted-foreground mt-1">The resume file could not be displayed.</p>
                 </div>
               )}
             </div>

@@ -19,6 +19,7 @@ from app.services.candidate import (
     get_selected_candi,
     get_all_candidates_by_job,
     deselect_candi,
+    get_candidate_answers,
     get_candidates_without_interview as candidates_without_interview
 )
 from app.services.job import increment_applicants
@@ -67,10 +68,15 @@ def create_candidate_endpoint(
 @router.get("/{candidate_id}")
 def get_candidate_endpoint(candidate_id: int, db: Session = Depends(get_db)):
     db_candidate = get_candidate(db, candidate_id)
+    db_answers = get_candidate_answers(db, candidate_id)
     if not db_candidate:
         raise HTTPException(status_code=404, detail="Candidate not found")
-    return db_candidate
+    return {
+        "candidate": db_candidate,
+        "answers": db_answers
+    }
 
+    
 
 @router.put("/select/{candidate_id}")
 def select_candidate(candidate_id: int, db: Session = Depends(get_db)):

@@ -1,116 +1,183 @@
-import { useEffect, useState } from "react";
+import { useState, useMemo } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/badge"; // Restored Badge
 import { 
   Search, 
   MapPin, 
-  Briefcase, 
-  Clock, 
   Trash2, 
   Filter, 
-  Building2,
-  DollarSign,
   MoreHorizontal,
-  Edit2Icon
+  Pencil,
+  Loader2,
+  Building2, // Restored Icons
+  Briefcase,
+  DollarSign
 } from "lucide-react";
 import { 
   Card, 
   CardContent, 
-  CardHeader, 
-  CardTitle 
 } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
-import { Separator } from "@/components/ui/separator";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import DepartmentForm from "./Depatments";
 import { jobApi, type Job } from "@/services/jobApi";
+import { departmentApi } from "@/services/departmentsApi";
 import type { Department } from "@/utils/types";
 import { useNavigate } from "react-router-dom";
-import { candidateApi } from "@/services/candidatesApi";
+import { useToast } from "@/hooks/use-toast";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 const Jobs = () => {
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  // --- UI States (Filters & Modals) ---
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
-  const [jobListing, setJobListing] = useState<Job[]>([]);
-  const [departments, setDepartments] = useState<Department[]>([]);
-  const [allJobs, setAllJobs] = useState<Job[]>([]);
   const [keyword, setKeyword] = useState("");
   const [locationFilter, setLocationFilter] = useState("");
-  const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
 
-  // Initial Data Fetch
-  useEffect(() => {
-    const fetchJobs = async () => {
-      try {
-        setLoading(true);
-        const [jobsData, deptsData] = await Promise.all([
-          jobApi.getAll(),
-          jobApi.getDepartments()
-        ]);
-        
-        const jobsWithQuestionsForm: Job[] = jobsData.map((job: any) => ({
-          ...job,
-        }));
+  const [isEditDeptOpen, setIsEditDeptOpen] = useState(false);
+  const [editingDept, setEditingDept] = useState<Department | null>(null);
+  const [newDeptName, setNewDeptName] = useState("");
 
-        setAllJobs(jobsWithQuestionsForm);
-        setJobListing(jobsWithQuestionsForm);
-        setDepartments(deptsData);
-      } catch (error) {
-        console.error("Error fetching initial data:", error);
-      } finally {
-        setLoading(false);
+  // --- 1. Queries (Fetch Data) ---
+
+  const { data: jobs = [], isLoading: isLoadingJobs } = useQuery({
+    queryKey: ["jobs"],
+    queryFn: () => jobApi.getAll(),
+  });
+
+  const { data: departments = [], isLoading: isLoadingDepts } = useQuery({
+    queryKey: ["departments"],
+    queryFn: () => jobApi.getDepartments(),
+  });
+
+  const isLoading = isLoadingJobs || isLoadingDepts;
+
+  // --- 2. Filter Logic (Derived State) ---
+  
+  const filteredJobs = useMemo(() => {
+    let result = [...jobs];
+
+    if (keyword.trim() !== "") {
+      const k = keyword.toLowerCase();
+      result = result.filter(
+        (job) =>
+          job.title.toLowerCase().includes(k) ||
+          job.description?.toLowerCase().includes(k)
+      );
+    }
+
+    if (locationFilter.trim() !== "") {
+      const l = locationFilter.toLowerCase();
+      result = result.filter((job) =>
+        job.location?.toLowerCase().includes(l)
+      );
+    }
+
+    if (selectedCategory !== null) {
+      result = result.filter(
+        (job) => job.department_id === Number(selectedCategory)
+      );
+    }
+
+    return result;
+  }, [jobs, keyword, locationFilter, selectedCategory]);
+
+  // --- 3. Mutations (Modify Data) ---
+
+  // Delete Job
+  const deleteJobMutation = useMutation({
+    mutationFn: (jobId: number) => jobApi.delete(jobId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["jobs"] });
+      toast({ title: "Job deleted successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete job", variant: "destructive" });
+    },
+  });
+
+  // Update Department
+  const updateDeptMutation = useMutation({
+    mutationFn: ({ id, name }: { id: number; name: string }) =>
+      departmentApi.updateDepartment(name, id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["departments"] });
+      toast({ title: "Department updated successfully" });
+      setIsEditDeptOpen(false);
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: "Update failed", 
+        description: error.message, 
+        variant: "destructive" 
+      });
+    },
+  });
+
+  // Delete Department
+  const deleteDeptMutation = useMutation({
+    mutationFn: (id: number) => departmentApi.deleteDepartment(id),
+    onSuccess: (_, deletedId) => {
+      queryClient.invalidateQueries({ queryKey: ["departments"] });
+      if (selectedCategory === deletedId) {
+        setSelectedCategory(null);
       }
-    };
-    fetchJobs();
-  }, []);
+      toast({ title: "Department deleted successfully" });
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: "Delete failed", 
+        description: error.message, 
+        variant: "destructive" 
+      });
+    },
+  });
 
-  // Filter Logic
-  useEffect(() => {
-    const applyFilters = () => {
-      let filtered = [...allJobs];
+  // --- Handlers ---
 
-      if (keyword.trim() !== "") {
-        filtered = filtered.filter(
-          (job) =>
-            job.title.toLowerCase().includes(keyword.toLowerCase()) ||
-            job.description?.toLowerCase().includes(keyword.toLowerCase())
-        );
-      }
+  const handleDeleteJob = (job_id: number) => {
+    if (window.confirm("Are you sure you want to delete this job posting?")) {
+      deleteJobMutation.mutate(job_id);
+    }
+  };
 
-      if (locationFilter.trim() !== "") {
-        filtered = filtered.filter((job) =>
-          job.location.toLowerCase().includes(locationFilter.toLowerCase())
-        );
-      }
+  const openEditDeptModal = (dept: Department) => {
+    setEditingDept(dept);
+    setNewDeptName(dept.department_name);
+    setIsEditDeptOpen(true);
+  };
 
-      if (selectedCategory !== null) {
-        filtered = filtered.filter(
-          (job) => job.department_id === Number(selectedCategory)
-        );
-      }
+  const handleUpdateDepartment = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingDept || !editingDept.department_id) return;
+    updateDeptMutation.mutate({ 
+      id: editingDept.department_id, 
+      name: newDeptName 
+    });
+  };
 
-      setJobListing(filtered);
-    };
-
-    applyFilters();
-  }, [selectedCategory, keyword, locationFilter, allJobs]);
-
-  const handleDelete = async (job_id: number) => {
-    if (!window.confirm("Are you sure you want to delete this job posting?")) return;
-
-    try {
-      await jobApi.delete(job_id);
-      setJobListing((prev) => prev.filter((job) => job.job_id !== job_id));
-      setAllJobs((prev) => prev.filter((job) => job.job_id !== job_id));
-    } catch (err) {
-      console.error(err);
-      alert("Failed to delete job");
+  const handleDeleteDepartment = (deptId: number) => {
+    if (window.confirm("Are you sure? This action cannot be undone.")) {
+      deleteDeptMutation.mutate(deptId);
     }
   };
 
@@ -127,6 +194,11 @@ const Jobs = () => {
       day: "numeric",
       year: "numeric"
     });
+  };
+
+  // Helper to find department name
+  const getDepartmentName = (deptId?: number) => {
+    return departments.find(d => d.department_id === deptId)?.department_name || 'General';
   };
 
   return (
@@ -188,31 +260,79 @@ const Jobs = () => {
                   <Filter className="h-4 w-4 text-gray-500" />
                   <h3 className="font-semibold text-gray-900">Departments</h3>
                 </div>
-                <div className="space-y-1">
-                  <button
-                    onClick={() => setSelectedCategory(null)}
-                    className={`w-full text-left px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                      selectedCategory === null
-                        ? "bg-blue-50 text-blue-700"
-                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                    }`}
-                  >
-                    All Departments
-                  </button>
-                  {departments.map((dept) => (
+                
+                {isLoadingDepts ? (
+                   <div className="space-y-2">
+                      <div className="h-8 bg-gray-100 rounded animate-pulse" />
+                      <div className="h-8 bg-gray-100 rounded animate-pulse" />
+                   </div>
+                ) : (
+                  <div className="space-y-1">
                     <button
-                      key={dept.department_id}
-                      onClick={() => setSelectedCategory(dept.department_id)}
+                      onClick={() => setSelectedCategory(null)}
                       className={`w-full text-left px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                        selectedCategory === dept.department_id
+                        selectedCategory === null
                           ? "bg-blue-50 text-blue-700"
                           : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                       }`}
                     >
-                      {dept.department_name}
+                      All Departments
                     </button>
-                  ))}
-                </div>
+                    
+                    {departments.map((dept) => (
+                      <div 
+                        key={dept.department_id} 
+                        className={`group flex items-center justify-between rounded-md transition-colors w-full ${
+                          selectedCategory === dept.department_id
+                          ? "bg-blue-50"
+                          : "hover:bg-gray-50"
+                        }`}
+                      >
+                        <button
+                          onClick={() => setSelectedCategory(dept.department_id!)}
+                          className={`flex-1 text-left px-3 py-2 text-sm font-medium ${
+                            selectedCategory === dept.department_id
+                              ? "text-blue-700"
+                              : "text-gray-600 group-hover:text-gray-900"
+                          }`}
+                        >
+                          {dept.department_name}
+                        </button>
+
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 mr-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <MoreHorizontal className="h-4 w-4 text-gray-400" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => openEditDeptModal(dept)}>
+                              <Pencil className="mr-2 h-4 w-4" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              onClick={() => handleDeleteDepartment(dept.department_id!)}
+                              disabled={deleteDeptMutation.isPending}
+                              className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                            >
+                              {deleteDeptMutation.isPending ? (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="mr-2 h-4 w-4" />
+                              )}
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -220,19 +340,19 @@ const Jobs = () => {
             <div className="lg:col-span-9 space-y-4">
               <div className="flex items-center justify-between px-1">
                 <h2 className="text-sm font-medium text-gray-500">
-                  Showing {jobListing.length} active jobs
+                  Showing {filteredJobs.length} active jobs
                 </h2>
               </div>
 
-              {loading ? (
+              {isLoadingJobs ? (
                 <div className="space-y-4">
                   {[1, 2, 3].map((n) => (
                     <div key={n} className="h-40 bg-gray-100 rounded-xl animate-pulse" />
                   ))}
                 </div>
-              ) : jobListing.length > 0 ? (
+              ) : filteredJobs.length > 0 ? (
                 <div className="space-y-4">
-                  {jobListing.map((job) => (
+                  {filteredJobs.map((job) => (
                     <Card 
                       key={job.job_id} 
                       className="group hover:shadow-md transition-all duration-200 border-gray-200"
@@ -252,10 +372,11 @@ const Jobs = () => {
                               )}
                             </div>
                             
+                            {/* Restored Original Card Style with Icons */}
                             <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-gray-500">
                               <div className="flex items-center gap-1.5">
                                 <Building2 className="h-4 w-4" />
-                                <span>{departments.find(d => d.department_id === job.department_id)?.department_name || 'General'}</span>
+                                <span>{getDepartmentName(job.department_id)}</span>
                               </div>
                               <div className="flex items-center gap-1.5">
                                 <MapPin className="h-4 w-4" />
@@ -263,12 +384,14 @@ const Jobs = () => {
                               </div>
                               <div className="flex items-center gap-1.5">
                                 <Briefcase className="h-4 w-4" />
-                                <span>{job.job_type}</span>
+                                <span>{job.job_type || 'Full-time'}</span>
                               </div>
-                              <div className="flex items-center gap-1.5">
-                                <DollarSign className="h-4 w-4" />
-                                <span>{job.salary_range}k</span>
-                              </div>
+                              {job.salary_range && (
+                                <div className="flex items-center gap-1.5">
+                                  <DollarSign className="h-4 w-4" />
+                                  <span>{job.salary_range}</span>
+                                </div>
+                              )}
                             </div>
                           </div>
 
@@ -281,25 +404,21 @@ const Jobs = () => {
                             
                             <Button 
                               onClick={() => navigate(`/candidates?job=${job.job_id}`)}
-                              className="bg-gray-900 text-white hover:bg-gray-800"
+                              className="bg-primary text-white hover:shadow-md"
                             >
                               View Candidates
                             </Button>
 
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="text-gray-400 hover:text-gray-900">
+                                <Button variant="ghost" size="icon" className="text-gray-400 hover:text-gray-900 hover:bg-inherit">
                                   <MoreHorizontal className="h-4 w-4" />
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => navigate(`/jobs/edit/${job.job_id}`)}>
-                                  <Edit2Icon className="mr-2 h-4 w-4"
-                                  />
-                                  Edit Details
-                                </DropdownMenuItem>
                                 <DropdownMenuItem 
-                                  onClick={() => handleDelete(job.job_id)}
+                                  onClick={() => handleDeleteJob(job.job_id)}
+                                  disabled={deleteJobMutation.isPending}
                                   className="text-red-600 focus:text-red-600 focus:bg-red-50"
                                 >
                                   <Trash2 className="mr-2 h-4 w-4" />
@@ -336,6 +455,42 @@ const Jobs = () => {
           </div>
         </div>
       </div>
+
+      {/* Edit Department Modal */}
+      <Dialog open={isEditDeptOpen} onOpenChange={setIsEditDeptOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Department</DialogTitle>
+            <DialogDescription>
+              Make changes to the department name here.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleUpdateDepartment}>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="name" className="text-right">
+                  Name
+                </Label>
+                <Input
+                  id="name"
+                  value={newDeptName}
+                  onChange={(e) => setNewDeptName(e.target.value)}
+                  className="col-span-3"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button 
+                type="submit" 
+                disabled={updateDeptMutation.isPending || !newDeptName.trim()}
+              >
+                {updateDeptMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Save changes
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 };

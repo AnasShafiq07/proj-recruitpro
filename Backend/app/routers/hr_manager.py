@@ -28,7 +28,7 @@ def get_current_hr(hr:HRManager = Depends(get_current_hr)):
         "created_at": hr.created_at
     }
 
-@router.post("/", response_model=HRManagerOut, status_code=status.HTTP_201_CREATED)
+@router.post("/", status_code=status.HTTP_201_CREATED)
 def create_hr_manager_endpoint(hr: HRManagerCreate, db: Session = Depends(get_db)):
     return create_hr_manager(db, hr)
 
@@ -39,11 +39,11 @@ def get_hr_manager_endpoint(hr_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="HR Manager not found")
     return db_hr
 
-@router.get("/", response_model=List[HRManagerOut])
+@router.get("/")
 def get_all_hr_managers(db: Session = Depends(get_db)):
     return get_hr_managers(db)
 
-@router.put("/{hr_id}", response_model=HRManagerOut)
+@router.put("/{hr_id}")
 def update_hr_manager_endpoint(hr_id: int, hr: HRManagerUpdate, db: Session = Depends(get_db)):
     db_hr = update_hr_manager(db, hr_id, hr)
     if not db_hr:

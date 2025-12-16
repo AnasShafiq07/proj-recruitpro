@@ -5,11 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { Plus } from "lucide-react";
+import { departmentApi } from "@/services/departmentsApi"; // Import the new service
 
 const DepartmentForm = () => {
   const [open, setOpen] = useState(false);
   const [newDepartment, setNewDepartment] = useState("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
+
   const handleAddDepartment = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -21,36 +23,30 @@ const DepartmentForm = () => {
       });
       return;
     }
+
     try {
       setIsLoading(true);
-      const response = await fetch("http://127.0.0.1:8000/departments/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem("authToken")}`
-        },
-        body: JSON.stringify({"department_name": newDepartment}),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || "Department adding failed!");
-      }
-
+      
+      // Use the API service instead of raw fetch
+      await departmentApi.createDepartment(newDepartment);
 
       toast({
         title: "Success!",
         description: "New Department added successfully.",
       });
+      
+      // Close dialog and reset form on success
+      setOpen(false); 
+      setNewDepartment("");
 
     } catch (error: any) {
        toast({
         title: "Department not added!",
         description: error.message,
+        variant: "destructive", // Added variant for better error visibility
       });
     } finally {
-        setNewDepartment("");
-        setIsLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -58,8 +54,7 @@ const DepartmentForm = () => {
     <div className="w-full max-w-2xl mx-auto">
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
-          <Button
-          >
+          <Button className="hover:shadow-lg">
             <Plus className="h-5 w-5 mr-2" />
             Add New Department
           </Button>
@@ -89,10 +84,16 @@ const DepartmentForm = () => {
             <Button 
               type="submit" 
               className="w-full"
-              disabled = {isLoading || newDepartment === ""}
+              disabled={isLoading || newDepartment === ""}
             >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Department
+              {isLoading ? (
+                <>Adding...</>
+              ) : (
+                <>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Department
+                </>
+              )}
             </Button>
           </form>
         </DialogContent>

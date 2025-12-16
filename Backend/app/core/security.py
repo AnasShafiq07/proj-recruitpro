@@ -5,6 +5,7 @@ from app.authorization.auth import decode_token
 from app.db.models import HRManager, Company
 from app.authorization.auth import is_blacklisted, hr_by_email
 from app.utilities.password import verify_password
+from email_validator import validate_email, EmailNotValidError
 
 
 # Shown in Swagger "Authorize" button as OAuth2
@@ -41,3 +42,5 @@ def require_role(role: str):
             raise HTTPException(status_code=403, detail="Forbidden insufficient role")
         return hr_data
     return __require_role
+
+

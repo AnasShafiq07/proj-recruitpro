@@ -47,6 +47,9 @@ def get_candidate_by_email(db: Session, email: str):
 def get_candidates(db: Session, company_id: int, skip: int = 0, limit: int = 100):
     return db.query(models.Candidate).filter(models.Candidate.company_id == company_id).offset(skip).limit(limit).all()
 
+def get_candidate_answers(db: Session, candidate_id: int):
+    return db.query(models.Answer).filter(models.Answer.candidate_id == candidate_id).all()
+
 def get_candidates_without_interview(db: Session, hr_id: int, job_id: int):
     return (
         db.query(models.Candidate)

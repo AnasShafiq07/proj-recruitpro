@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { authApi } from "@/services/authenticationApi"; // Import the updated service
 
 export const SignupForm = () => {
   const [name, setName] = useState("");
@@ -19,9 +20,6 @@ export const SignupForm = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // -------------------------------
-  // ✅ EMAIL CHECKING USEEFFECT
-  // -------------------------------
   useEffect(() => {
     if (!email) {
       setEmailExists(false);
@@ -31,14 +29,9 @@ export const SignupForm = () => {
     const delay = setTimeout(async () => {
       try {
         setCheckingEmail(true);
-
-        const res = await fetch(
-          `http://127.0.0.1:8000/auth/check-email?email=${email}`
-        );
-
-        const exists = await res.json();  
-        // FastAPI: False = exists, True = does not exist
-        setEmailExists(exists === false);
+        // Returns True if available, False if taken
+        const isAvailable = await authApi.checkEmailAvailability(email);
+        setEmailExists(!isAvailable); 
       } catch (err) {
         console.error("Email check error:", err);
       } finally {
@@ -76,41 +69,21 @@ export const SignupForm = () => {
     setIsLoading(true);
 
     try {
-      // Create the company
-      const companyResponse = await fetch("http://127.0.0.1:8000/auth/company/signup/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: companyName }),
+      // 1. Create the company
+      const companyData = await authApi.createCompany(companyName);
+      
+      // 2. Create admin user linked to company
+      const authData = await authApi.registerAdmin({
+        name,
+        email,
+        role: "admin",
+        password,
+        company_id: companyData.company_id,
       });
 
-      if (!companyResponse.ok) {
-        const errorData = await companyResponse.json();
-        throw new Error(errorData.detail || "Company signup failed");
-      }
-      const companyData = await companyResponse.json();
-      const company_id = companyData.company_id;
-
-      // Create admin user
-      const hrResponse = await fetch("http://127.0.0.1:8000/auth/admin/signup/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name,
-          email,
-          role: "admin",
-          password,
-          company_id,
-        }),
-      });
-
-      if (!hrResponse.ok) {
-        const errorData = await hrResponse.json();
-        throw new Error(errorData.detail || "HR signup failed");
-      }
-
-      const hrData = await hrResponse.json();
-      localStorage.setItem("authToken", hrData.access_token);
-      localStorage.setItem("refreshToken", hrData.refresh_token);
+      // 3. Store tokens
+      localStorage.setItem("authToken", authData.access_token);
+      localStorage.setItem("refreshToken", authData.refresh_token);
 
       toast({
         title: "Signup successful!",
@@ -160,7 +133,6 @@ export const SignupForm = () => {
 
       <div className="space-y-2">
         <Label htmlFor="signup-email">Email</Label>
-
         <div className="relative">
           <Input
             id="signup-email"
@@ -179,7 +151,6 @@ export const SignupForm = () => {
             </span>
           )}
         </div>
-
         {emailExists && (
           <p className="text-sm text-red-500">This email is already registered</p>
         )}

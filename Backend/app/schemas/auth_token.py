@@ -22,3 +22,10 @@ class AuthTokenCreate(AuthTokenBase):
 class BlacklistedTokenCreate(BlacklistedTokenBase):
     pass
 
+class GoogleAuthRequest(BaseModel):
+    token: str
+
+class GoogleSignupRequest(BaseModel):
+    token: str
+    company_id: int 
+    role: str = "admin"
