@@ -5,8 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { Plus } from "lucide-react";
-import { departmentApi } from "@/services/departmentsApi"; // Import the new service
-
+import { departmentApi } from "@/services/departmentsApi"; 
 const DepartmentForm = () => {
   const [open, setOpen] = useState(false);
   const [newDepartment, setNewDepartment] = useState("");
@@ -27,7 +26,6 @@ const DepartmentForm = () => {
     try {
       setIsLoading(true);
       
-      // Use the API service instead of raw fetch
       await departmentApi.createDepartment(newDepartment);
 
       toast({
@@ -35,7 +33,6 @@ const DepartmentForm = () => {
         description: "New Department added successfully.",
       });
       
-      // Close dialog and reset form on success
       setOpen(false); 
       setNewDepartment("");
 
@@ -43,7 +40,7 @@ const DepartmentForm = () => {
        toast({
         title: "Department not added!",
         description: error.message,
-        variant: "destructive", // Added variant for better error visibility
+        variant: "destructive", 
       });
     } finally {
       setIsLoading(false);

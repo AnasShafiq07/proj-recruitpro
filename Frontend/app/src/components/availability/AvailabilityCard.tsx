@@ -45,7 +45,6 @@ export const AvailabilityCard = ({
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     if (isNaN(date.getTime())) {
-      // Fix for dates like "2025-01-20" without time
       return new Date(dateString + "T00:00:00").toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",

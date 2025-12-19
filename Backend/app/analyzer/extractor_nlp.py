@@ -2,7 +2,6 @@ import re
 import spacy
 from typing import Tuple, Optional, List
 
-# ✅ Load more accurate medium model
 try:
     nlp = spacy.load("en_core_web_md")
 except:
@@ -15,7 +14,6 @@ EDU_PATTERN = re.compile(
     re.IGNORECASE
 )
 
-# Universal skill keywords — covers IT, business, law, healthcare, etc.
 SKILL_KEYWORDS = [
     "python", "java", "c++", "javascript", "react", "node", "django", "flask", "fastapi",
     "sql", "mysql", "mongodb", "docker", "aws", "azure", "git", "html", "css",
@@ -65,10 +63,10 @@ def extract_skills(text: str) -> Optional[str]:
 
 
 def extract_resume_fields(text: str) -> Tuple[Optional[str], Optional[str], Optional[str]]:
-    """
-    Extract skills, experience, and education from any resume text.
-    Works across multiple industries and resume styles.
-    """
+    
+    # Extract skills, experience, and education from any resume text.
+    # Works across multiple industries and resume styles.
+    
     skills = extract_skills(text)
     experience = extract_experience(text)
     education = extract_education(text)

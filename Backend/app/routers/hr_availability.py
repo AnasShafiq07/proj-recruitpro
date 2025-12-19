@@ -15,7 +15,6 @@ from app.services.hr_availability import (
     get_selected_availability as selected_availability
 )
 
-# base url : http://127.0.0.1:8000/
 
 router = APIRouter(prefix="/availability", tags=["HR Availability"])
 
@@ -32,7 +31,6 @@ def create_hr_availability(
     return availability
 
 
-# ---------------- Get All Availability for HR ----------------
 @router.get("/")
 def list_hr_availability(
     db: Session = Depends(get_db),
@@ -40,7 +38,6 @@ def list_hr_availability(
 ):
     
     availabilities = get_availability(db, hr.id)
-    # Return empty list if no availabilities exist (instead of 404)
     return availabilities
 
 @router.get("/selected/")
@@ -61,7 +58,6 @@ def select_availability(availability_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Availability not found.")
     return updated
 
-# ---------------- Update Availability ----------------
 @router.put("/{availability_id}")
 def update_hr_availability(
     availability_id: int,
@@ -76,7 +72,6 @@ def update_hr_availability(
     return updated
 
 
-# ---------------- Delete Availability ----------------
 @router.delete("/{availability_id}")
 def delete_hr_availability(
     availability_id: int,

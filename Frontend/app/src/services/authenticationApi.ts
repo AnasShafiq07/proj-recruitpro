@@ -22,7 +22,6 @@ export interface AdminSignupPayload {
 }
 
 export const authApi = {
-  // POST /auth/hr/login/
   async login(email: string, password: string): Promise<LoginResponse> {
     const formData = new URLSearchParams();
     formData.append("username", email);
@@ -43,7 +42,6 @@ export const authApi = {
 
   async checkEmailAvailability(email: string): Promise<boolean> {
     const response = await fetch(`${API_BASE_URL}/auth/check-email?email=${email}`);
-    // Based on your logic: True = Available (Does not exist), False = Taken (Exists)
     return await response.json();
   },
 

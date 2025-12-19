@@ -29,7 +29,6 @@ export const SignupForm = () => {
     const delay = setTimeout(async () => {
       try {
         setCheckingEmail(true);
-        // Returns True if available, False if taken
         const isAvailable = await authApi.checkEmailAvailability(email);
         setEmailExists(!isAvailable); 
       } catch (err) {
@@ -42,9 +41,7 @@ export const SignupForm = () => {
     return () => clearTimeout(delay);
   }, [email]);
 
-  // -------------------------------
-  // ✅ HANDLE SUBMIT
-  // -------------------------------
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -69,10 +66,8 @@ export const SignupForm = () => {
     setIsLoading(true);
 
     try {
-      // 1. Create the company
       const companyData = await authApi.createCompany(companyName);
       
-      // 2. Create admin user linked to company
       const authData = await authApi.registerAdmin({
         name,
         email,
@@ -81,7 +76,6 @@ export const SignupForm = () => {
         company_id: companyData.company_id,
       });
 
-      // 3. Store tokens
       localStorage.setItem("authToken", authData.access_token);
       localStorage.setItem("refreshToken", authData.refresh_token);
 

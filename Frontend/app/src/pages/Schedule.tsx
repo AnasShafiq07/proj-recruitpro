@@ -29,7 +29,6 @@ const normalizeAvailability = (item: any) => {
     id: item.id,
     hr_id: item.hr_id,
     created_at: item.created_at ?? new Date().toISOString(),
-    // ensure days is always an array
     days: (() => {
   if (!item.days) return [];
 
@@ -54,7 +53,6 @@ const normalizeAvailability = (item: any) => {
     end_time: item.end_time ?? "17:00",
     duration_minutes: item.duration_minutes ?? 30,
     break_minutes: item.break_minutes ?? 0,
-    // dates as ISO strings (AvailabilityCard formats them)
     start_date: typeof item.start_date === "string"
   ? item.start_date
   : new Date(item.start_date).toISOString(),
@@ -63,7 +61,6 @@ end_date: typeof item.end_date === "string"
   ? item.end_date
   : new Date(item.end_date).toISOString(),
 
-    // camelCase flag expected by frontend
     isSelected: item.is_selected ?? false,
   };
 };
@@ -89,7 +86,6 @@ const Index = () => {
     console.log("Interface Job", jobs);
     let data = await availabilityApi.getAll();
 
-    // Normalize each item into the frontend shape
     const normalized = data.map((item: any) => normalizeAvailability(item));
 
     console.log("Normalized Days:", normalized.map(n => n.days));
@@ -181,11 +177,9 @@ const Index = () => {
 
   const handleSelect = async (id: number) => {
     try {
-      // Call backend to set this availability as selected
       const response = await availabilityApi.select(id);
       const normalized = normalizeAvailability(response);
       
-      // Update all availabilities - set only the selected one to isSelected = true
       setAvailabilities(prev => prev.map(a => ({
         ...a,
         isSelected: a.id === id

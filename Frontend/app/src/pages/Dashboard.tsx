@@ -2,9 +2,7 @@ import { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { JobCard } from "@/components/jobs/JobCard";
 import { Button } from "@/components/ui/button";
-// Assuming you might have these UI components or use standard HTML
 import { Input } from "@/components/ui/input"; 
-import { Skeleton } from "@/components/ui/skeleton"; // Optional: for loading state
 import { 
   Plus, 
   Search, 
@@ -17,7 +15,6 @@ import { useNavigate } from "react-router-dom";
 import { jobApi, type Job } from "@/services/jobApi";
 import { candidateApi } from "@/services/candidatesApi";
 
-// Helper component for Stat Cards
 const StatCard = ({ title, value, icon: Icon, description }: any) => (
   <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm flex items-start justify-between hover:shadow-md transition-shadow">
     <div>
@@ -55,7 +52,6 @@ const Dashboard = () => {
     fetchJobs();
   }, []);
 
-  // Filter jobs based on search
   const filteredJobs = jobListing.filter((job) => 
     job.title?.toLowerCase().includes(searchQuery.toLowerCase())
   );

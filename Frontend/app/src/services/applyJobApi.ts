@@ -46,10 +46,8 @@ export interface ResumeUploadResponse {
   file_url?: string;
 }
 
-// --- API Service ---
 
 export const applicationApi = {
-  // GET /jobs/url/{slug}
   async getJobBySlug(slug: string, signal?: AbortSignal): Promise<JobResponse> {
     const response = await fetch(`${API_CONFIG.BASE_URL}/jobs/url/${slug}`, {
       method: "GET",
@@ -77,7 +75,6 @@ export const applicationApi = {
     return await response.json();
   },
 
-  // POST /candidates/
   async submitApplication(data: CandidatePayload): Promise<any> {
     const response = await fetch(`${API_CONFIG.BASE_URL}/candidates/`, {
       method: "POST",

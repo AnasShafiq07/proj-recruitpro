@@ -25,23 +25,19 @@ import { candidateViewApi, CandidateWithAnswers } from "@/services/candidateView
 import { jobApi, Question } from '@/services/jobApi';
 
 const CandidateView = () => {
-  // --- State ---
   const [googleAuthenticated, setGoogleAuthenticated] = useState<boolean>(false);
   const [candidate, setCandidate] = useState<CandidateWithAnswers | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // Modals & Actions
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [showResumeModal, setShowResumeModal] = useState(false);
   const [scheduling, setScheduling] = useState(false);
   const [scheduleSuccess, setScheduleSuccess] = useState(false);
   
-  // Resume Data
   const [resumeBlobUrl, setResumeBlobUrl] = useState<string | null>(null);
   const [isResumeLoading, setIsResumeLoading] = useState(false);
   
-  // Forms
   const [interviewForm, setInterviewForm] = useState({
     summary: '',
     description: 'Technical Interview Discussion',
@@ -65,21 +61,17 @@ const CandidateView = () => {
     };
   }, [resumeBlobUrl]);
 
-  // --- Fetch Logic ---
   const fetchData = async (id: string) => {
     try {
       setLoading(true);
       
-      // 1. Fetch Google Auth Status
       const authData = await candidateViewApi.getGoogleAuthStatus();
       setGoogleAuthenticated(authData.authenticated);
 
-      // 2. Fetch Candidate
       const candidateData = await candidateViewApi.getCandidateById(id);
       setCandidate(candidateData);
       setInterviewForm(prev => ({ ...prev, summary: `Interview with ${candidateData.name}` }));
 
-      // 3. Fetch Job Questions if job_id exists
       if (candidateData.job_id) {
         try {
           const questionsData = await jobApi.getJobQuestions(candidateData.job_id);
@@ -96,7 +88,6 @@ const CandidateView = () => {
     }
   };
 
-  // --- Handlers ---
   const handleScheduleInterview = async () => {
     if (!candidate || !interviewForm.start_time || !interviewForm.end_time) {
       alert('Please fill in all required fields');
@@ -134,7 +125,6 @@ const CandidateView = () => {
   const handleStatusUpdate = async (field: string, value: boolean) => {
     if (!candidate) return;
     
-    // Optimistic Update
     setCandidate((prev: any) => ({ ...prev, [field]: value }));
 
     try {
@@ -177,9 +167,7 @@ const CandidateView = () => {
     }
   };
 
-  // --- Render Helpers ---
-  const getAnswerForQuestion = (qId: number) => {
-    // Ensure answerts exists before trying to find
+    const getAnswerForQuestion = (qId: number) => {
     const answer = candidate?.answers?.find(a => a.question_id === qId);
     return answer ? answer.answer_text : null;
   };
@@ -208,8 +196,6 @@ const CandidateView = () => {
   return (
     <DashboardLayout>
       <div className="min-h-screen bg-muted/30 pb-12 animate-in fade-in duration-300">
-        
-        {/* Sticky Header */}
         <div className="sticky top-0 z-20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b px-6 py-3 flex items-center gap-2">
            <Button variant="ghost" size="sm" onClick={() => window.history.back()} className="text-muted-foreground hover:text-foreground -ml-2">
               <ChevronLeft className="h-4 w-4 mr-1" /> Back
@@ -224,13 +210,10 @@ const CandidateView = () => {
         <div className="max-w-7xl mx-auto px-6 py-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             
-            {/* --- LEFT SIDEBAR (Profile & Actions) --- */}
             <div className="lg:col-span-4 space-y-6 order-2 lg:order-1">
               
-              {/* Hero Profile Card */}
               <Card className="overflow-hidden border-t-4 border-t-primary shadow-sm relative">
                 <CardContent className="pt-12 px-6 pb-6 text-center">
-                   {/* Avatar & AI Score Overlay */}
                   <div className="relative inline-block mb-5">
                     <Avatar className="h-32 w-32 border-4 border-background shadow-xl mx-auto relative z-10">
                       <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${candidate.name}`} />
@@ -280,7 +263,6 @@ const CandidateView = () => {
                 </CardContent>
               </Card>
 
-              {/* Pipeline Action Center */}
               <Card className="shadow-sm">
                 <CardHeader className="pb-4 border-b">
                   <CardTitle className="text-base font-semibold flex items-center gap-2">
@@ -289,7 +271,6 @@ const CandidateView = () => {
                 </CardHeader>
                 <CardContent className="p-0">
                   <div className="divide-y">
-                    {/* Stage 1: Shortlist */}
                     <div className={`p-4 flex items-center justify-between transition-colors ${candidate.selected_for_interview ? 'bg-primary/5' : 'hover:bg-muted/50'}`}>
                       <div className="flex items-center gap-4">
                          <div className={`h-10 w-10 rounded-full flex items-center justify-center ${candidate.selected_for_interview ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
@@ -305,7 +286,6 @@ const CandidateView = () => {
                       </Button>
                     </div>
 
-                    {/* Stage 2: Interview */}
                     <div className={`p-4 transition-colors ${candidate.interview_scheduled ? 'bg-purple-50' : 'hover:bg-muted/50'}`}>
                        <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
@@ -330,7 +310,6 @@ const CandidateView = () => {
                       )}
                     </div>
 
-                    {/* Stage 3: Final Decision */}
                      <div className={`p-4 flex items-center justify-between transition-colors ${candidate.selected ? 'bg-green-50' : 'hover:bg-muted/50'}`}>
                       <div className="flex items-center gap-4">
                          <div className={`h-10 w-10 rounded-full flex items-center justify-center ${candidate.selected ? 'bg-green-600 text-white' : 'bg-muted text-muted-foreground'}`}>
@@ -350,7 +329,6 @@ const CandidateView = () => {
               </Card>
             </div>
 
-            {/* --- RIGHT CONTENT (Tabs) --- */}
             <div className="lg:col-span-8 order-1 lg:order-2">
               <Tabs defaultValue="overview" className="w-full">
                 <TabsList className="grid w-full grid-cols-2 mb-8 p-1 bg-muted/80 backdrop-blur-sm">
@@ -363,9 +341,7 @@ const CandidateView = () => {
                   </TabsTrigger>
                 </TabsList>
 
-                {/* TAB 1: OVERVIEW */}
                 <TabsContent value="overview" className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
-                  {/* Experience */}
                   <Card className="shadow-sm border-l-4 border-l-blue-500">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-3 text-lg">
@@ -384,7 +360,6 @@ const CandidateView = () => {
                     </CardContent>
                   </Card>
 
-                  {/* Education */}
                   <Card className="shadow-sm border-l-4 border-l-purple-500">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-3 text-lg">
@@ -403,7 +378,6 @@ const CandidateView = () => {
                     </CardContent>
                   </Card>
 
-                  {/* Skills */}
                   <Card className="shadow-sm border-l-4 border-l-emerald-500">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-3 text-lg">
@@ -429,7 +403,6 @@ const CandidateView = () => {
                   </Card>
                 </TabsContent>
 
-                {/* TAB 2: SCREENING QUESTIONS (Timeline Style) */}
                 <TabsContent value="screening" className="animate-in fade-in slide-in-from-bottom-2 duration-500">
                   <Card className="shadow-sm">
                     <CardHeader>
@@ -445,7 +418,6 @@ const CandidateView = () => {
                             const answer = getAnswerForQuestion(q.question_id);
                             return (
                               <div key={q.question_id} className="relative group">
-                                {/* Timeline Dot */}
                                 <div className={`absolute -left-[33px] top-1 h-6 w-6 rounded-full border-4 border-background flex items-center justify-center z-10 transition-colors ${answer ? 'bg-primary' : 'bg-muted-foreground'}`}>
                                   <span className="text-[10px] font-bold text-primary-foreground">{index + 1}</span>
                                 </div>
@@ -485,9 +457,6 @@ const CandidateView = () => {
           </div>
         </div>
 
-        {/* --- MODALS --- */}
-
-        {/* Schedule Modal */}
         <Dialog open={showScheduleModal} onOpenChange={setShowScheduleModal}>
           <DialogContent className="sm:max-w-[550px] p-0 overflow-hidden gap-0">
             <DialogHeader className="p-6 pb-2 bg-muted/30 border-b">

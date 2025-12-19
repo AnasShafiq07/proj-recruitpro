@@ -10,8 +10,6 @@ export interface SchedulingDetails {
 
 export const schedulingApi = {
 
-  
-
   async scheduleAll(details: SchedulingDetails) {
     console.log(details);
     const response = await fetch(`${API_BASE_URL}/google/schedule_interviews`, {
@@ -42,7 +40,7 @@ export const schedulingApi = {
     try {
       return await response.json();
     } catch {
-      return { success: true }; // Backend may return no JSON
+      return { success: true };
     }
   },
 };

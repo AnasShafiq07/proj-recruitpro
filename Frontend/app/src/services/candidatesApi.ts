@@ -11,7 +11,7 @@ export interface Candidate {
   phone?: string | null;
   location?: string | null;
 
-  skills?: string | null;       // JSON string or comma list depending on backend
+  skills?: string | null;   
   experience?: string | null;  
   education?: string | null;
   ai_score? : number | null;

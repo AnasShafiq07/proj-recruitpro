@@ -13,8 +13,7 @@ import { ShareModal } from "@/components/ui/modal";
 import { LinkedInPostPreview } from "@/components/jobs/LinkedInPostPreview";
 import type { Department } from "../utils/types";
 
-// Import the new API service
-import { jobApi, CreateJobPayload } from "@/services/createJobApi"; // Adjust path as needed
+import { jobApi, CreateJobPayload } from "@/services/createJobApi"; 
 
 const CreateJob = () => {
   const { toast } = useToast();
@@ -30,7 +29,6 @@ const CreateJob = () => {
   const [linkToShare, setLinkToShare] = useState("");
   const [linkedinConnected, setLinkedinConnected] = useState<boolean>(false);
 
-  // --- API Functions via Service ---
 
   const fetchLinkedInDetails = async () => {
     try {
@@ -38,7 +36,6 @@ const CreateJob = () => {
       setLinkedinConnected(data.authenticated);
     } catch (error) {
       console.error('Error fetching LinkedIn status:', error);
-      // Optional: setLinkedinConnected(false);
     }
   }
 
@@ -74,7 +71,6 @@ const CreateJob = () => {
     const formData = new FormData(e.currentTarget);
     const deadline = formData.get("deadline") as string;
 
-    // Construct the payload matching the interface
     const jobData: CreateJobPayload = {
       department_id: Number(selectedDepartment),
       title: formData.get("title") as string,
@@ -97,10 +93,9 @@ const CreateJob = () => {
     };
 
     try {
-      // Use the API service to create the job
       const resData = await jobApi.createJob(jobData);
 
-      setLinkToShare("http://localhost:8082/apply/" + resData.job_link);
+      setLinkToShare(`${window.location.origin}/apply` + resData.job_link);
 
       toast({
         title: "Success!",
@@ -123,7 +118,6 @@ const CreateJob = () => {
     <DashboardLayout>
       <div className="min-h-screen bg-background">
         <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto">
-          {/* Header */}
           <div className="mb-6 lg:mb-8 animate-fade-in">
             <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
               <div className="flex items-center gap-3">
@@ -143,7 +137,6 @@ const CreateJob = () => {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5 lg:space-y-6">
-            {/* Job Information */}
             <Card className="border-border/50 shadow-sm hover:shadow-md transition-all duration-300 animate-fade-in">
               <CardHeader className="border-b border-border/30 pb-4">
                 <div className="flex items-center gap-2">

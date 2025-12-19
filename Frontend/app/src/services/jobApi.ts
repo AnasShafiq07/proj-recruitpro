@@ -1,6 +1,5 @@
 
 import type { Department } from "@/utils/types";
-import { getJobById } from "./jobService";
 import { API_CONFIG } from "@/config";
 
 const API_BASE_URL = API_CONFIG.BASE_URL;
@@ -67,13 +66,11 @@ export const jobApi = {
     if (!response.ok) {
       console.error("Response not OK:", response.status, response.statusText);
       
-      // Handle 404 gracefully - no availabilities exist yet
       if (response.status === 404) {
         console.log("No availabilities found (404) - returning empty array");
         return [];
       }
       
-      // Log response body for other errors
       try {
         const errorData = await response.json();
         console.error("Server error response:", errorData);
@@ -86,7 +83,6 @@ export const jobApi = {
     try {
       const data = await response.json();
       
-      // Ensure data is an array
       if (!Array.isArray(data)) {
         console.warn("Expected array from API, got:", typeof data);
         return Array.isArray(data) ? data : [];
@@ -111,13 +107,11 @@ export const jobApi = {
     if (!response.ok) {
       console.error("Response not OK:", response.status, response.statusText);
       
-      // Handle 404 gracefully - no availabilities exist yet
       if (response.status === 404) {
         console.log("No availabilities found (404) - returning empty array");
         return [];
       }
       
-      // Log response body for other errors
       try {
         const errorData = await response.json();
         console.error("Server error response:", errorData);
@@ -130,7 +124,6 @@ export const jobApi = {
     try {
       const data = await response.json();
       
-      // Ensure data is an array
       if (!Array.isArray(data)) {
         console.warn("Expected array from API, got:", typeof data);
         return Array.isArray(data) ? data : [];
@@ -269,7 +262,7 @@ export const jobApi = {
       }
     }
 
-    return true; // backend returns 204 so success = true
+    return true; 
   },
 
 }

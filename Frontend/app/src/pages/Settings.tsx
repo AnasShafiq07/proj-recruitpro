@@ -24,7 +24,6 @@ import { LinkedInAccountCard } from "@/components/settings/LinkedInAccountCard";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { hrManagerApi } from "@/services/hrApi";
 
-// Interface
 export interface HRManager {
   id: number;
   name: string;
@@ -40,19 +39,16 @@ const Settings = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // 1. Profile Form State
   const [profileData, setProfileData] = useState({
     name: "",
     email: "",
   });
 
-  // 2. Password Form State
   const [passwordData, setPasswordData] = useState({
     newPassword: "",
     confirmPassword: "",
   });
 
-  // 3. Create HR Form State (Admin Only)
   const [newHrData, setNewHrData] = useState<Partial<HRManager>>({
     name: "",
     email: "",
@@ -61,7 +57,6 @@ const Settings = () => {
     company_id: 0,
   });
 
-  // Fetch Current User
   useEffect(() => {
     const fetchUser = async () => {
       try {
@@ -77,7 +72,6 @@ const Settings = () => {
     fetchUser();
   }, []);
 
-  // Handler: Update Basic Profile
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
@@ -94,7 +88,6 @@ const Settings = () => {
     }
   };
 
-  // Handler: Update Password
   const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
@@ -111,7 +104,6 @@ const Settings = () => {
 
     setSaving(true);
     try {
-      // Send only the password field
       await hrManagerApi.update(user.id, { password: passwordData.newPassword });
       alert("Success: Password changed successfully");
       setPasswordData({ newPassword: "", confirmPassword: "" });
@@ -122,7 +114,6 @@ const Settings = () => {
     }
   };
 
-  // Handler: Create New HR (Admin)
   const handleCreateHR = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);

@@ -7,7 +7,6 @@ from datetime import datetime
 router = APIRouter(prefix="/upload", tags=["Resume Upload"])
 
 
-# Ensure folder exists
 UPLOAD_DIR = "app/static/resumes"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
@@ -25,7 +24,6 @@ async def upload_resume(file: UploadFile = File(...)):
 
     file_path = os.path.join(UPLOAD_DIR, filename)
 
-    # Save file locally
     with open(file_path, "wb") as f:
         f.write(await file.read())
 

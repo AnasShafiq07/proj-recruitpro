@@ -58,7 +58,6 @@ def refresh_google_token(db: Session, hr_id: int, token: GoogleToken):
     new_access_token = token_data["access_token"]
     expires_in = token_data["expires_in"]
 
-    # Create a new token row
     updated_token = create_or_update_google_token(
         db=db,
         hr_id=hr_id,
@@ -129,7 +128,6 @@ def auth_callback(request: Request, code: str = None, error: str = None, state: 
     refresh_token = token_data.get("refresh_token")
     expires_in = token_data.get("expires_in")
 
-    # Fetch user info
     userinfo_resp = requests.get(
         "https://www.googleapis.com/oauth2/v3/userinfo",
         headers={"Authorization": f"Bearer {access_token}"}
@@ -165,7 +163,6 @@ def auth_status(db: Session = Depends(get_db), hr: HRManager = Depends(get_curre
         "hr_id": hr.id
     }
 
-# Create Calendar Event with Meet
 @router.post("/create_event")
 def create_event(event_data: EventCreate, db: Session = Depends(get_db), hr: HRManager = Depends(get_current_hr)):
     token = get_valid_token(db, hr.id)
@@ -223,7 +220,6 @@ def schedule_all_interviews(data: SchedulingDetails,db: Session = Depends(get_db
     start_time = datetime.strptime(availability.start_time, "%H:%M").time()
     end_time = datetime.strptime(availability.end_time, "%H:%M").time()
 
-    # Get all candidates who don't yet have interviews
     candidates = get_candidates_without_interview(db, hr.id, data.job_id)
 
     if not candidates:
@@ -251,7 +247,6 @@ def schedule_all_interviews(data: SchedulingDetails,db: Session = Depends(get_db
     if not all_slots:
         raise HTTPException(status_code=400, detail="No valid interview slots found")
 
-    # Get HR's Google token
     token = get_valid_token(db, hr.id)
     access_token = token.access_token
     headers = {"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"}
@@ -292,7 +287,6 @@ def schedule_all_interviews(data: SchedulingDetails,db: Session = Depends(get_db
         created_event = create_resp.json()
         meet_link = created_event.get("hangoutLink")
 
-        # Save interview to DB
         create_interview(db, InterviewCreate(
             candidate_id=candidate.candidate_id,
             job_id=candidate.job_id,

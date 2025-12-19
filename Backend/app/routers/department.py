@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
-
 from app.db.session import get_db
 from app.db.models import HRManager
 from app.core.security import get_current_hr

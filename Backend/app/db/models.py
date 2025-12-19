@@ -1,4 +1,3 @@
-# models.py
 from datetime import datetime, timezone
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import String, Integer, Text, DateTime, Float, Boolean, ForeignKey
@@ -55,7 +54,6 @@ class HRAvailability(Base):
     is_selected: Mapped[bool] = mapped_column(Boolean, nullable=True, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc))
     
-    # Relationships
     hr_manager: Mapped["HRManager"] = relationship(back_populates="availability")
     slots: Mapped[list["InterviewSlot"]] = relationship(back_populates="availability", cascade="all, delete-orphan")
 

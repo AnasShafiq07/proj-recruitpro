@@ -1,15 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.db.session import get_db  # SQLAlchemy session dependency
+from app.db.session import get_db  
 from app.db import models
 from app.analyzer.extractor import extract_text
-from app.analyzer.matcher import generate_ai_scores_for_job  # your AI scoring function
+from app.analyzer.matcher import generate_ai_scores_for_job  
 from app.core.security import get_current_hr
 
 router = APIRouter(
     prefix="/analyzer",
-    tags=["Resume Analyzer**********"],
+    tags=["Resume Analyzer"],
     dependencies=[Depends(get_current_hr)]
 )
 

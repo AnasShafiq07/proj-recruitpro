@@ -56,7 +56,6 @@ interface RawBackendResponse {
 
 export const candidateViewApi = {
   
-  // 1. Get Google Auth Status
   async getGoogleAuthStatus(): Promise<GoogleAuthStatus> {
     const response = await fetch(`${API_BASE_URL}/google/auth/status`, {
       headers: {
@@ -65,7 +64,6 @@ export const candidateViewApi = {
     });
 
     if (!response.ok) {
-        // Fallback to false if endpoint fails/404s to prevent UI crash
         console.warn("Failed to check google auth status");
         return { authenticated: false };
     }
@@ -92,7 +90,6 @@ export const candidateViewApi = {
     return mappedData;
   },
 
-  // 3. Schedule Interview
   async scheduleInterview(data: InterviewSchedulePayload): Promise<any> {
     const response = await fetch(`${API_BASE_URL}/google/create_event`, {
       method: 'POST',
@@ -110,7 +107,6 @@ export const candidateViewApi = {
     return response.json();
   },
 
-  // 4. Update Candidate Status (Generic PATCH)
   async updateStatus(id: number, data: Record<string, any>): Promise<any> {
     const response = await fetch(`${API_BASE_URL}/candidates/update/${id}`, {
       method: 'PATCH',
@@ -127,7 +123,6 @@ export const candidateViewApi = {
     return response.json();
   },
 
-  // 5. Get Resume Blob
   async getResumeBlob(resumeUrl: string): Promise<{ url: string; blob: Blob }> {
     const fetchUrl = resumeUrl.startsWith('http') ? resumeUrl : `${API_BASE_URL}${resumeUrl}`;
 

@@ -7,11 +7,9 @@ class PaymentBase(BaseModel):
     amount: Optional[float] = None
     status: Optional[str] = "Pending"
 
-# 👇 used inside CandidateCreate request (no candidate_id yet)
 class PaymentInCandidate(PaymentBase):
     stripe_payment_intent_id: Optional[str] = None
 
-# 👇 used when actually creating the payment in DB (backend assigns candidate_id)
 class PaymentCreate(PaymentBase):
     candidate_id: int
     stripe_payment_intent_id: Optional[str] = None

@@ -1,4 +1,4 @@
-import type { Department } from "../utils/types"; // Assuming this is where your types are
+import type { Department } from "../utils/types";
 import { API_CONFIG } from "@/config";
 
 const API_BASE_URL = API_CONFIG.BASE_URL;
@@ -19,13 +19,11 @@ export interface CreateJobPayload {
   questions_form?: { questions: { question_text: string }[] };
 }
 
-// Interface for LinkedIn Auth Response
 export interface LinkedInAuthStatus {
   authenticated: boolean;
 }
 
 export const jobApi = {
-  // GET /linkedin/auth/status
   async getLinkedInAuthStatus(): Promise<LinkedInAuthStatus> {
     const response = await fetch(`${API_BASE_URL}/linkedin/auth/status`, {
       method: "GET",
@@ -35,15 +33,12 @@ export const jobApi = {
     });
 
     if (!response.ok) {
-        // If it fails, we assume not authenticated or log error, 
-        // but to match previous logic we return the json or throw
         throw new Error("Failed to check LinkedIn status");
     }
 
     return await response.json();
   },
 
-  // GET /departments/get/all
   async getAllDepartments(): Promise<Department[]> {
     const response = await fetch(`${API_BASE_URL}/departments/get/all`, {
       method: "GET",
@@ -61,7 +56,6 @@ export const jobApi = {
     return await response.json();
   },
 
-  // POST /jobs/
   async createJob(data: CreateJobPayload): Promise<{ job_link: string }> {
     const response = await fetch(`${API_BASE_URL}/jobs/`, {
       method: "POST",

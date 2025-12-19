@@ -2,7 +2,7 @@ import { AvailabilityFormData } from "@/components/availability/AvailabilityForm
 import { API_CONFIG } from "@/config";
 
 const API_BASE_URL = API_CONFIG.BASE_URL;
-// availability Api
+
 interface AvailabilityResponse {
   id: number;
   hr_id: number;
@@ -18,7 +18,6 @@ interface AvailabilityResponse {
 }
 
 export const availabilityApi = {
-  // Get all availabilities for the current HR
   async getAll(): Promise<AvailabilityResponse[]> {
     const response = await fetch(`${API_BASE_URL}/availability/`, {
       method: "GET",
@@ -31,13 +30,11 @@ export const availabilityApi = {
     if (!response.ok) {
       console.error("Response not OK:", response.status, response.statusText);
       
-      // Handle 404 gracefully - no availabilities exist yet
       if (response.status === 404) {
         console.log("No availabilities found (404) - returning empty array");
         return [];
       }
       
-      // Log response body for other errors
       try {
         const errorData = await response.json();
         console.error("Server error response:", errorData);
@@ -51,7 +48,6 @@ export const availabilityApi = {
       const data = await response.json();
       console.log("Successfully fetched availabilities:", data);
       
-      // Ensure data is an array
       if (!Array.isArray(data)) {
         console.warn("Expected array from API, got:", typeof data);
         return Array.isArray(data) ? data : [];
@@ -75,13 +71,11 @@ export const availabilityApi = {
     if (!response.ok) {
       console.error("Response not OK:", response.status, response.statusText);
       
-      // Handle 404 gracefully - no availabilities exist yet
       if (response.status === 404) {
         console.log("No availabilities found (404) - returning empty array");
         return null;
       }
       
-      // Log response body for other errors
       try {
         const errorData = await response.json();
         console.error("Server error response:", errorData);
@@ -103,7 +97,6 @@ export const availabilityApi = {
     }
   },
 
-  // Create new availability
   async create(data: AvailabilityFormData): Promise<AvailabilityResponse> {
     const response = await fetch(`${API_BASE_URL}/availability/`, {
       method: "POST",
@@ -122,7 +115,6 @@ export const availabilityApi = {
     return response.json();
   },
 
-  // Update availability
   async update(
     id: number,
     data: Partial<AvailabilityFormData>
@@ -144,7 +136,6 @@ export const availabilityApi = {
     return response.json();
   },
 
-  // Delete availability
   async delete(id: number): Promise<void> {
     const response = await fetch(`${API_BASE_URL}/availability/${id}`, {
       method: "DELETE",
@@ -160,7 +151,6 @@ export const availabilityApi = {
     }
   },
 
-  // NEW: Select availability
   async select(availability_id: number): Promise<AvailabilityResponse> {
     const response = await fetch(
       `${API_BASE_URL}/availability/select/${availability_id}`,

@@ -26,7 +26,7 @@ class AnswerCreate(AnswerBase):
 
 class CandidateCreateWithAnswersAndPayment(CandidateCreate):
     answers: Optional[List[AnswerCreate]] = None
-    payment: Optional[PaymentInCandidate] = None  # 👈 use PaymentInCandidate, not PaymentCreate
+    payment: Optional[PaymentInCandidate] = None  
 
 class CandidateUpdate(BaseModel):
     name: Optional[str] = None

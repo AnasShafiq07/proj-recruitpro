@@ -30,7 +30,6 @@ export const GoogleAccountCard = () => {
   const handleConnect = async () => {
     try {
       const data = await googleApi.initiateLogin();
-      // Redirect the user to Google
       window.location.href = data.redirect_url;
     } catch (error) {
       console.error("Login failed", error);

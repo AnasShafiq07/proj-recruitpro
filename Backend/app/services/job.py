@@ -6,8 +6,6 @@ from app.schemas.question import QuestionCreate
 
 
 def create_job(db: Session, job_data: JobCreateWithFormCreate):
-    # create job
-    print(job_data.department_id)
     db_job: models.Job = models.Job(
         hr_id = job_data.hr_id,
         company_id = job_data.company_id,

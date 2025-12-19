@@ -5,12 +5,10 @@ from app.schemas.question import QuestionOut, QuestionCreate
 
 
 class QuestionsFormCreate(BaseModel):
-    # create form with a list of questions
     questions: List[QuestionCreate] = []
 
 
 class QuestionsFormUpdate(BaseModel):
-    # allow updating only questions (not job_id)
     questions: List[QuestionCreate] = []
 
 

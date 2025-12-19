@@ -21,7 +21,6 @@ export const LinkedInAccountCard = () => {
   const fetchStatus = async () => {
     try {
       setLoading(true);
-      // Get HR ID from your auth system - for now using placeholder
       const hrId = 1;
       const response = await fetch(`${API_BASE_URL}/linkedin/auth/status`, {
         method: "GET",

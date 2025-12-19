@@ -106,7 +106,6 @@ const ApplyJob = () => {
     submitMutation.mutate(formData);
   };
 
-  // --- Render States ---
 
   if (isLoading)
     return (
@@ -142,7 +141,6 @@ const ApplyJob = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-primary/10">
-      {/* Header with Logo */}
       <div className="bg-gradient-to-r from-primary/95 via-primary to-primary/95 shadow-lg border-b border-primary/20">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between py-4 sm:py-6">
@@ -164,7 +162,6 @@ const ApplyJob = () => {
       </div>
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12 max-w-5xl">
-        {/* Job Details Header */}
         <Card className="mb-6 sm:mb-8 shadow-2xl border-border/40 hover:shadow-[var(--shadow-glow)] transition-all duration-500 overflow-hidden animate-fade-in">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-accent to-primary"></div>
           <CardHeader className="space-y-4 sm:space-y-6 pb-4 sm:pb-6">

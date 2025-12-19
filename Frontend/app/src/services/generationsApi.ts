@@ -13,10 +13,6 @@ export interface GenerationResponse {
 
 export const generationApi = {
 
-  /**
-   * Generates a LinkedIn post image and caption.
-   * Calls: POST /generate/linkedin_post
-   */
   async generateLinkedinPost(data: PromptRequest): Promise<GenerationResponse> {
     const response = await fetch(`${API_BASE_URL}/generate/linkedin_post`, {
       method: "POST",
@@ -36,10 +32,6 @@ export const generationApi = {
     return await response.json();
   },
 
-  /**
-   * Triggers the send offer letter logic.
-   * Calls: POST /generate/send-offer-letter
-   */
   async sendOfferLetter(data: PromptRequest): Promise<boolean> {
     const response = await fetch(`${API_BASE_URL}/generate/send-offer-letter`, {
       method: "POST",

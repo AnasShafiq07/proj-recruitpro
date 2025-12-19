@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge"; // Restored Badge
+import { Badge } from "@/components/ui/badge"; 
 import { 
   Search, 
   MapPin, 
@@ -11,7 +11,7 @@ import {
   MoreHorizontal,
   Pencil,
   Loader2,
-  Building2, // Restored Icons
+  Building2,
   Briefcase,
   DollarSign
 } from "lucide-react";
@@ -48,7 +48,6 @@ const Jobs = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  // --- UI States (Filters & Modals) ---
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [keyword, setKeyword] = useState("");
   const [locationFilter, setLocationFilter] = useState("");
@@ -56,8 +55,6 @@ const Jobs = () => {
   const [isEditDeptOpen, setIsEditDeptOpen] = useState(false);
   const [editingDept, setEditingDept] = useState<Department | null>(null);
   const [newDeptName, setNewDeptName] = useState("");
-
-  // --- 1. Queries (Fetch Data) ---
 
   const { data: jobs = [], isLoading: isLoadingJobs } = useQuery({
     queryKey: ["jobs"],
@@ -70,8 +67,6 @@ const Jobs = () => {
   });
 
   const isLoading = isLoadingJobs || isLoadingDepts;
-
-  // --- 2. Filter Logic (Derived State) ---
   
   const filteredJobs = useMemo(() => {
     let result = [...jobs];
@@ -101,9 +96,7 @@ const Jobs = () => {
     return result;
   }, [jobs, keyword, locationFilter, selectedCategory]);
 
-  // --- 3. Mutations (Modify Data) ---
 
-  // Delete Job
   const deleteJobMutation = useMutation({
     mutationFn: (jobId: number) => jobApi.delete(jobId),
     onSuccess: () => {
@@ -115,7 +108,6 @@ const Jobs = () => {
     },
   });
 
-  // Update Department
   const updateDeptMutation = useMutation({
     mutationFn: ({ id, name }: { id: number; name: string }) =>
       departmentApi.updateDepartment(name, id),
@@ -133,7 +125,6 @@ const Jobs = () => {
     },
   });
 
-  // Delete Department
   const deleteDeptMutation = useMutation({
     mutationFn: (id: number) => departmentApi.deleteDepartment(id),
     onSuccess: (_, deletedId) => {
@@ -152,7 +143,6 @@ const Jobs = () => {
     },
   });
 
-  // --- Handlers ---
 
   const handleDeleteJob = (job_id: number) => {
     if (window.confirm("Are you sure you want to delete this job posting?")) {
@@ -196,7 +186,6 @@ const Jobs = () => {
     });
   };
 
-  // Helper to find department name
   const getDepartmentName = (deptId?: number) => {
     return departments.find(d => d.department_id === deptId)?.department_name || 'General';
   };

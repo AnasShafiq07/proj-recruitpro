@@ -30,9 +30,9 @@ import {
   CheckCircle2, 
   Clock, 
   Link, 
-  ArrowUpDown, // Icon for default
-  ArrowUp,     // Icon for ascending
-  ArrowDown    // Icon for descending
+  ArrowUpDown, 
+  ArrowUp, 
+  ArrowDown    
 } from "lucide-react";
 import { toast } from "sonner";
 import { useSearchParams } from "react-router-dom";
@@ -196,14 +196,12 @@ const Candidates = () => {
     });
   };
 
-  // Helper function to toggle sort from table header click
   const toggleSort = () => {
     if (sortOrder === "default") setSortOrder("desc");
     else if (sortOrder === "desc") setSortOrder("asc");
     else setSortOrder("default");
   };
 
-  // Processing: Filter -> Sort
   const processedCandidates = candidates
     .filter((candidate) => {
       const matchesSearch =
@@ -233,7 +231,6 @@ const Candidates = () => {
       }
     });
 
-  // Stats calculations
   const totalCandidates = candidates.length;
   const selectedCandidates = candidates.filter((c) => c.selected === true).length;
   const interviewedCandidates = candidates.filter((c) => c.interview_scheduled === true).length;
@@ -244,7 +241,6 @@ const Candidates = () => {
   return (
     <DashboardLayout>
       <div className="min-h-screen bg-background">
-        {/* Header Section */}
         <div className="bg-card border-b border-border">
           <div className="px-8 py-6">
             <div className="flex items-center justify-between">

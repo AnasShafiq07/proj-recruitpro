@@ -1,4 +1,3 @@
-# job_router.py
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -37,7 +36,7 @@ def create_job_endpoint(job: JobCreateWithFormCreate, db: Session = Depends(get_
 @router.get("/get-all")
 def get_jobs(db: Session = Depends(get_db), hr: HRManager = Depends(get_current_hr)):
     jobs: List[Job] = get_jobs_by_company(db, hr.company_id)
-    if jobs:  # have to remove this 
+    if jobs: 
         for job in jobs:
             if not job.created_at:
                 job.created_at = datetime.now(timezone.utc)

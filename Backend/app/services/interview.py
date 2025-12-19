@@ -8,7 +8,6 @@ from app.schemas.interview import (
     InterviewCreate, InterviewUpdate
 )
 
-# ---------- INTERVIEW CRUD ----------
 def create_interview(db: Session, data: InterviewCreate):
     db_interview = models.Interview(**data.model_dump())
     db.add(db_interview)

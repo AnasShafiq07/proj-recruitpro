@@ -18,10 +18,8 @@ from app.db import models
 from dotenv import load_dotenv
 load_dotenv()
 
-# Stripe config
 stripe.api_key = "sk_test_51SAVjyLr6v0ksVBDFsrOofxFI3dwWvy4tWX4034hlXk68yfmtmMAXjkegDszR1VjMopzq2siTlze17wKL63BgfnU0000oIHIrV"
 
-# ⚡ Option 1: Use webhook secret from CLI (local only)
 WEBHOOK_SECRET = "whsec_339d67665a25ddfd79035d7e42fb178130ee0c053ae00a1e915766f8a7cf74f7"
 
 router = APIRouter(prefix="/payments", tags=["Payments"])
@@ -33,7 +31,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     payload = await request.body()
     sig_header = request.headers.get("stripe-signature")
 
-    print("🔔 Webhook called")  # Debug log
+    print("Webhook called")  
 
     try:
         event = stripe.Webhook.construct_event(payload, sig_header, WEBHOOK_SECRET)
@@ -49,7 +47,6 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
 
         print(f"PaymentIntent succeeded: {stripe_payment_intent_id}")
 
-        # Find matching Payment record in DB
         db_payment = (
             db.query(models.Payment)
             .filter(models.Payment.stripe_payment_intent_id == stripe_payment_intent_id)
@@ -60,16 +57,13 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
             db_payment.status = "Success"
             db.commit()
             db.refresh(db_payment)
-            print("✅ Payment updated in DB")
+            print("Payment updated in DB")
         else:
-            print("⚠️ No matching payment record found")
+            print("No matching payment record found")
 
     return {"status": "success"}
 
 
-# ----------------------
-# ✅ Protected routes (HR login required)
-# ----------------------
 @router.get("/{payment_id}", response_model=PaymentOut, dependencies=[Depends(get_current_hr)])
 def get_payment_endpoint(payment_id: int, db: Session = Depends(get_db)):
     db_payment = get_payment(db, payment_id)

@@ -8,7 +8,6 @@ from app.schemas.interview import (
     InterviewSlotCreate
 )
 
-# ---------- INTERVIEW SLOT CRUD ----------
 def create_slot(db: Session, data: InterviewSlotCreate):
     db_slot = models.InterviewSlot(**data.model_dump())
     db.add(db_slot)

@@ -13,7 +13,6 @@ export interface GoogleLoginResponse {
 
 
 export const googleApi = {
-  // GET /google/auth/status
   async getStatus(): Promise<GoogleAuthStatus> {
     const response = await fetch(`${API_CONFIG.BASE_URL}/google/auth/status`, {
       method: "GET",
@@ -29,7 +28,6 @@ export const googleApi = {
     return await response.json();
   },
 
-  // GET /google/auth/login
   async initiateLogin(): Promise<GoogleLoginResponse> {
     const response = await fetch(`${API_CONFIG.BASE_URL}/google/auth/login`, {
       method: "GET",

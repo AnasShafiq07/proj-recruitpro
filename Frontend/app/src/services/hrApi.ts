@@ -13,7 +13,6 @@ export interface HRManager {
 }
 
 export const hrManagerApi = {
-  // GET /hr-managers/curr-hr
   async getCurrentHR(): Promise<HRManager> {
     const response = await fetch(`${API_BASE_URL}/hr-managers/curr-hr`, {
       method: "GET",
@@ -30,7 +29,6 @@ export const hrManagerApi = {
     return await response.json();
   },
 
-  // GET /hr-managers/
   async getAll(): Promise<HRManager[]> {
     const response = await fetch(`${API_BASE_URL}/hr-managers/`, {
       method: "GET",
@@ -48,7 +46,6 @@ export const hrManagerApi = {
     return await response.json();
   },
 
-  // GET /hr-managers/{hr_id}
   async getById(hr_id: number): Promise<HRManager> {
     const response = await fetch(`${API_BASE_URL}/hr-managers/${hr_id}`, {
       method: "GET",
@@ -68,7 +65,6 @@ export const hrManagerApi = {
     return await response.json();
   },
 
-  // POST /hr-managers/
   async createAdmin(data: Partial<HRManager>): Promise<HRManager> {
     const response = await fetch(`${API_BASE_URL}/hr-managers/`, {
       method: "POST",
@@ -104,7 +100,6 @@ export const hrManagerApi = {
     return await response.json();
   },
 
-  // PUT /hr-managers/{hr_id}
   async update(hr_id: number, data: Partial<HRManager>): Promise<HRManager> {
     const response = await fetch(`${API_BASE_URL}/hr-managers/${hr_id}`, {
       method: "PUT",
@@ -122,7 +117,6 @@ export const hrManagerApi = {
     return await response.json();
   },
 
-  // DELETE /hr-managers/{hr_id}
   async delete(hr_id: number): Promise<boolean> {
     const response = await fetch(`${API_BASE_URL}/hr-managers/${hr_id}`, {
       method: "DELETE",

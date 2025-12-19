@@ -9,7 +9,6 @@ export interface Department {
 }
 
 export const departmentApi = {
-  // POST /departments/
   async createDepartment(name: string): Promise<Department> {
     const response = await fetch(`${API_BASE_URL}/departments/`, {
       method: "POST",

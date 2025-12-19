@@ -1,9 +1,7 @@
-# app/schemas/interview.py
 from pydantic import BaseModel, Field, EmailStr
 from datetime import datetime
 from typing import Optional, List
 
-# ----------- HR AVAILABILITY -----------
 class HRAvailabilityBase(BaseModel):
     days: List[str] = Field(..., example=["Monday", "Wednesday", "Friday"])
     start_time: str = Field(..., example="09:00")  # "HH:MM"
@@ -33,7 +31,6 @@ class HRAvailabilityOut(HRAvailabilityBase):
         orm_mode = True
 
 
-# ----------- INTERVIEW SLOT -----------
 class InterviewSlotBase(BaseModel):
     date: datetime
     start_time: str
@@ -50,7 +47,6 @@ class InterviewSlotOut(InterviewSlotBase):
         orm_mode = True
 
 
-# ----------- INTERVIEW -----------
 class InterviewBase(BaseModel):
     candidate_id: int
     job_id: int

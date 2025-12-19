@@ -17,10 +17,6 @@ export interface LinkedInPostResponse {
 
 export const linkedinApi = {
 
-  /**
-   * Fetches the LinkedIn OAuth URL. 
-   * The component calling this should redirect window.location to the returned URL.
-   */
   async getAuthUrl(): Promise<string> {
     const response = await fetch(`${API_BASE_URL}/linkedin/auth/login`, {
       method: "GET",
@@ -49,9 +45,6 @@ export const linkedinApi = {
     }
   },
 
-  /**
-   * Checks if the current HR user has a valid LinkedIn token.
-   */
   async getAuthStatus(): Promise<LinkedInAuthStatus> {
     const response = await fetch(`${API_BASE_URL}/linkedin/auth/status`, {
       method: "GET",
@@ -79,10 +72,6 @@ export const linkedinApi = {
     }
   },
 
-  /**
-   * Posts a job update to LinkedIn.
-   * Uses FormData because the backend endpoint accepts UploadFile and Form data.
-   */
   async createPost(caption: string, applyLink: string, image: File | null): Promise<LinkedInPostResponse> {
     const formData = new FormData();
     formData.append("caption", caption);
@@ -95,8 +84,6 @@ export const linkedinApi = {
     const response = await fetch(`${API_BASE_URL}/linkedin/post/`, {
       method: "POST",
       headers: {
-        // NOTE: Content-Type is NOT set here. 
-        // The browser automatically sets it to 'multipart/form-data; boundary=...' when using FormData.
         "Authorization": `Bearer ${localStorage.getItem("authToken")}`,
       },
       body: formData,
