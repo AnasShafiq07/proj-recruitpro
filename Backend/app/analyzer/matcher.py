@@ -45,6 +45,7 @@ def get_or_create_resume_parsing(db: Session, candidate_id: int) -> models.Resum
 # =====================================
 # MAIN FUNCTION
 # =====================================
+# Generate AI scores for all candidates of a job
 def generate_ai_scores_for_job(db: Session, job_id: int) -> Dict[str, Any]:
     """
     For a given job_id:
@@ -139,3 +140,4 @@ def generate_ai_scores_for_job(db: Session, job_id: int) -> Dict[str, Any]:
         "processed_candidates": processed,
         "status": "ai_scores_generated_successfully"
     }
+#=====================================
