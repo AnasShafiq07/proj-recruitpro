@@ -42,27 +42,35 @@ def create_candidate_endpoint(
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
-    if job.application_fee and job.application_fee > 0:
-        # Create Stripe PaymentIntent
-        intent = create_stripe_payment_intent(amount=job.application_fee)
+    # if job.application_fee and job.application_fee > 0:
+    #     # Create Stripe PaymentIntent
+    #     intent = create_stripe_payment_intent(amount=job.application_fee)
 
-        # Create a pending payment record
-        db_payment = create_payment_record(
-            db=db,
-            candidate_id=db_candidate.candidate_id,
-            job_id=job.job_id,
-            amount=job.application_fee,
-            stripe_payment_intent_id=intent["id"],
-            status="Pending",
-        )
+    #     # Create a pending payment record
+    #     db_payment = create_payment_record(
+    #         db=db,
+    #         candidate_id=db_candidate.candidate_id,
+    #         job_id=job.job_id,
+    #         amount=job.application_fee,
+    #         stripe_payment_intent_id=intent["id"],
+    #         status="Pending",
+    #     )   
 
-        return {
-            "candidate": db_candidate,
-            "payment_intent": intent,
-            "payment_record": db_payment,
-        }
-    else:
-        return {"candidate": db_candidate, "payment": None}
+    #     return {
+    #         "candidate": db_candidate,
+    #         "payment_intent": intent,
+    #         "payment_record": db_payment,
+    #     }
+    # else:
+    return {
+        "candidate": {
+            "candidate_id": db_candidate.candidate_id,
+            "name": db_candidate.name,
+            "email": db_candidate.email,
+            "job_id": db_candidate.job_id,
+        },
+        "payment": None
+    }
 
 
 @router.get("/{candidate_id}")

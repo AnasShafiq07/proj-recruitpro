@@ -215,7 +215,7 @@ class Candidate(Base):
     skills: Mapped[str] = mapped_column(Text, nullable=True)
     experience: Mapped[str] = mapped_column(Text, nullable=True)
     education: Mapped[str] = mapped_column(Text, nullable=True)
-    resume_url: Mapped[str] = mapped_column(String)
+    resume_url: Mapped[str] = mapped_column(String, nullable=True)
     selected_for_interview: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
     interview_scheduled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
     selected: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)

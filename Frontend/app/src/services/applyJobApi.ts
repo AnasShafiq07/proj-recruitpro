@@ -44,6 +44,8 @@ export interface CandidatePayload {
 export interface ResumeUploadResponse {
   url?: string;
   file_url?: string;
+  file_name?: string;
+  file_path?: string;
 }
 
 
@@ -60,17 +62,34 @@ export const applicationApi = {
     return await response.json();
   },
 
-  async uploadResume(file: File): Promise<ResumeUploadResponse> {
+  async uploadResume(file: File, jobId: number, candidateId: number): Promise<ResumeUploadResponse> {
+    // Validate inputs
+    if (!file) {
+      throw new Error("Resume file is required");
+    }
+    if (!jobId) {
+      throw new Error("Job ID is required");
+    }
+    if (!candidateId) {
+      throw new Error("Candidate ID is required");
+    }
+
+    console.log("uploadResume called with:", { file: file.name, jobId, candidateId });
+
     const formData = new FormData();
     formData.append("file", file);
+    formData.append("job_id", String(jobId));
+    formData.append("candidate_id", String(candidateId));
 
-    const response = await fetch(`${API_CONFIG.BASE_URL}/upload/resume`, {
+    const response = await fetch(`${API_CONFIG.BASE_URL}/analyzer/analyze`, {
       method: "POST",
       body: formData,
     });
 
     if (!response.ok) {
-      throw new Error("Failed to upload resume");
+      const errorData = await response.json().catch(() => ({}));
+      const errorMessage = errorData.detail || `Failed to upload resume (${response.status})`;
+      throw new Error(errorMessage);
     }
     return await response.json();
   },

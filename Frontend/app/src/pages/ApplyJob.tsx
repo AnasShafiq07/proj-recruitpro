@@ -47,13 +47,8 @@ const ApplyJob = () => {
     mutationFn: async (formData: FormData) => {
       if (!jobData) throw new Error("Job data missing");
 
-      let resumeUrl = "";
-      if (resumeFile) {
-        const uploadRes = await applicationApi.uploadResume(resumeFile);
-        resumeUrl = uploadRes.url || uploadRes.file_url || "";
-      }
-
-      const candidateData = {
+      // Step 1: Create candidate without resume
+      const candidateData: any = {
         job_id: jobData.job.job_id,
         company_id: jobData.job.company_id,
         name: formData.get("name") as string,
@@ -63,26 +58,51 @@ const ApplyJob = () => {
         skills: (formData.get("skills") as string) || undefined,
         experience: (formData.get("experience") as string) || undefined,
         education: (formData.get("education") as string) || undefined,
-        resume_url: resumeUrl || undefined,
+      };
+
+      const candidateRes = await applicationApi.submitApplication({
+        ...candidateData,
         answers: jobData.questions.map((q) => ({
           question_id: q.question_id,
           answer_text: answers[q.question_id] || "",
         })),
-      };
+      });
+      
+      console.log("Candidate response:", candidateRes);
+      
+      if (!candidateRes.candidate || !candidateRes.candidate.candidate_id) {
+        throw new Error("Failed to get candidate ID from response");
+      }
+      
+      const newCandidateId = candidateRes.candidate.candidate_id;
+      console.log("New candidate ID:", newCandidateId);
+      console.log("Job ID:", jobData.job.job_id);
+      console.log("Resume file:", resumeFile?.name);
+      
+      // Step 2: Upload and analyze resume (updates candidate with resume_url and ai_score)
+      if (resumeFile) {
+        await applicationApi.uploadResume(
+          resumeFile,
+          jobData.job.job_id,
+          newCandidateId
+        );
+      }
 
-      return await applicationApi.submitApplication(candidateData);
+      return newCandidateId;
     },
-    onSuccess: () => {
+    onSuccess: (candidateId) => {
       toast({
         title: "Success!",
         description: "Application submitted successfully.",
       });
-
+      // Optional: redirect or reset form
+      console.log("Application submitted for candidate:", candidateId);
     },
     onError: (error: Error) => {
+      console.error("Submission error:", error);
       toast({
         title: "Error!",
-        description: error.message,
+        description: error.message || "Failed to submit application",
         variant: "destructive",
       });
     },
