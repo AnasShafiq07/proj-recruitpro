@@ -25,6 +25,7 @@ export interface Answer {
 }
 
 export interface CandidateWithAnswers {
+  interviewed: any;
   candidate_id: number;
   job_id: number;
   company_id?: number | null;
@@ -52,6 +53,25 @@ export interface CandidateWithAnswers {
 interface RawBackendResponse {
   candidate: Omit<CandidateWithAnswers, 'answers'>;
   answers: Answer[];
+}
+
+export interface OfferLetterPayload {
+  // Required candidate details
+  name: string;
+  designation: string;
+  salary: string;
+  
+  // Logistics
+  start_date: string; // Use string to handle ISO format or "YYYY-MM-DD"
+  expiry_date?: string; // Optional: When the offer expires
+  
+  // Perks and Details
+  joining_bonus?: string;
+  reporting_to?: string;
+  location?: string;
+  
+  // The specific template ID to use (from your Google Drive)
+  google_doc_id: string; 
 }
 
 export const candidateViewApi = {
@@ -86,7 +106,7 @@ export const candidateViewApi = {
       ...rawData.candidate, 
       answers: rawData.answers 
     };
-
+    console.log("mapped data",mappedData.resume_url);
     return mappedData;
   },
 
@@ -108,8 +128,8 @@ export const candidateViewApi = {
   },
 
   async updateStatus(id: number, data: Record<string, any>): Promise<any> {
-    const response = await fetch(`${API_BASE_URL}/candidates/update/${id}`, {
-      method: 'PATCH',
+    const response = await fetch(`${API_BASE_URL}/candidates/${id}`, {
+      method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
@@ -124,8 +144,8 @@ export const candidateViewApi = {
   },
 
   async getResumeBlob(resumeUrl: string): Promise<{ url: string; blob: Blob }> {
+    
     const fetchUrl = resumeUrl.startsWith('http') ? resumeUrl : `${API_BASE_URL}${resumeUrl}`;
-
     const res = await fetch(fetchUrl, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
@@ -140,5 +160,100 @@ export const candidateViewApi = {
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
     return { url, blob };
+  },
+
+  async sendOfferLetter(candidateId: number, data: {
+    salary: string;
+    perks: string;
+    other_details: string;
+  }): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/candidates/${candidateId}/send-offer`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to send offer letter');
+    }
+    return response.json();
+  },
+
+  async selectForInterview(candidateId: number): Promise<boolean> {
+    const response = await fetch(`${API_BASE_URL}/candidates/select-for-interview/${candidateId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to select candidate for interview');
+    }
+    return response.json();
+  },
+
+  async uploadOfferTemplate(file: File): Promise<{
+    view_link: string; google_doc_id: string; message: string 
+}> {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await fetch(`${API_BASE_URL}/google/upload-template`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+        // Do NOT set 'Content-Type' here, the browser sets it for FormData
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to upload template');
+    }
+    return response.json();
+  },
+  async getOfferTemplate(): Promise<{ google_doc_id: string; view_link: string }> {
+  const response = await fetch(`${API_BASE_URL}/google/offer-template`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || 'Failed to fetch template');
   }
+  return response.json();
+  },
+
+ async generateAndSendOffer(candidateId: number, candidateEmail: string, replacements: Record<string, string>): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/google/send-offer-letter`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+      },
+      body: JSON.stringify({
+        candidate_id: candidateId,
+        candidate_email: candidateEmail,
+        replacements: replacements, // e.g., {"{{salary}}": "50,000", "{{role}}": "Backend Dev"}
+        subject: "Your Official Offer Letter from RecruitPro"
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to process and send offer letter');
+    }
+    return response.json();
+}
 };

@@ -99,8 +99,8 @@ export const candidateApi = {
   },
 
   async update(candidate_id: number, data: Partial<Candidate>): Promise<Candidate> {
-    const response = await fetch(`${API_BASE_URL}/candidates/update/${candidate_id}`, {
-      method: "PATCH",
+    const response = await fetch(`${API_BASE_URL}/candidates/${candidate_id}`, {
+      method: "PUT",
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${localStorage.getItem("authToken")}`,

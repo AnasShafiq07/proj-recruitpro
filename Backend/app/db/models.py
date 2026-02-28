@@ -35,6 +35,7 @@ class HRManager(Base):
     linkedin_tokens: Mapped[list["LinkedInToken"]] = relationship(back_populates="hr_manager")
     google_tokens: Mapped[list["GoogleToken"]] = relationship(back_populates="hr_manager")
     availability: Mapped[list["HRAvailability"]] = relationship(back_populates="hr_manager", cascade="all, delete-orphan")
+    document_templates: Mapped[list["DocumentTemplate"]] = relationship(back_populates="hr_manager", cascade="all, delete-orphan")
 
 
 class HRAvailability(Base):
@@ -134,6 +135,17 @@ class GoogleToken(Base):
     hr_manager: Mapped["HRManager"] = relationship(back_populates="google_tokens")
 
 
+class DocumentTemplate(Base):
+    __tablename__ = "document_template"
+
+    template_id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    hr_id: Mapped[int] = mapped_column(ForeignKey("hr_manager.id"))
+    google_doc_id: Mapped[str] = mapped_column(String, nullable=True)
+    is_active:Mapped[bool] = mapped_column(Boolean, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc), nullable=True)
+    hr_manager: Mapped["HRManager"] = relationship(back_populates="document_templates")
+
+
 class Job(Base):
     __tablename__ = "job"
 
@@ -218,6 +230,7 @@ class Candidate(Base):
     resume_url: Mapped[str] = mapped_column(String, nullable=True)
     selected_for_interview: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
     interview_scheduled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
+    interviewed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
     selected: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
     ai_score: Mapped[int] = mapped_column(Integer, default=0, nullable=True)
     meet_link: Mapped[str] = mapped_column(String, nullable=True)

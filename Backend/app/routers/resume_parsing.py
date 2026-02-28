@@ -34,7 +34,7 @@ def send_feedback(parsing_id: int, db: Session = Depends(get_db), hr=Depends(get
     result = generate_and_send_feedback(
         db=db,
         parsing_id=parsing_id,
-        hr_id=hr.id  # ✅ pass hr.id here
+        hr_id=hr.id 
     )
     return result
 

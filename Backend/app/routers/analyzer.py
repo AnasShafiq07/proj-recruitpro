@@ -69,6 +69,8 @@ async def analyze_resume(
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
     filename = f"{timestamp}_{file.filename}"
     file_path = os.path.join(UPLOAD_DIR, filename)
+    # Public URL served by FastAPI StaticFiles mount at "/static"
+    file_url = f"/static/resumes/{filename}"
     
     try:
         with open(file_path, "wb") as buffer:
@@ -105,7 +107,8 @@ async def analyze_resume(
         candidate.skills = skills_extracted or candidate.skills
         candidate.experience = experience_extracted or candidate.experience
         candidate.education = education_extracted or candidate.education
-        candidate.resume_url = filename
+        # Store a web-accessible URL (use forward slashes) rather than an OS path
+        candidate.resume_url = file_url
         
         # Create or update resume parsing record
         parsing = db.query(models.ResumeParsing).filter(
@@ -152,6 +155,7 @@ async def analyze_resume(
             "job_id": job_id,
             "file_name": filename,
             "file_path": file_path,
+            "file_url": file_url,
             "job_title": job_obj.title,
             "resume_parsing": {
                 "skills": skills_extracted,

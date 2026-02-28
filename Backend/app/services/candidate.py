@@ -69,7 +69,8 @@ def select_for_interview(db: Session, candidate_id: int):
     db_candidate = get_candidate(db, candidate_id)
     if not db_candidate:
         return None
-    db_candidate.selected_for_interview = True
+    db_candidate.selected_for_interview = not db_candidate.selected_for_interview
+    db.add(db_candidate)
     db.commit()
     db.refresh(db_candidate)
     return db_candidate
@@ -112,6 +113,8 @@ def select_candi(db: Session, candidate_id: int):
     db.refresh(db_candidate)
     return db_candidate
 
+
+
 def deselect_candi(db: Session, candidate_id: int):
     db_candidate = get_candidate(db, candidate_id)
     if not db_candidate:
@@ -131,6 +134,14 @@ def update_candidate(db: Session, candidate_id: int, candidate: CandidateUpdate)
     db.refresh(db_candidate)
     return db_candidate
 
+def update_interviewed_status(db: Session, candidate_id: int):
+    db_candidate = get_candidate(db, candidate_id)
+    if not db_candidate:
+        return None
+    db_candidate.interviewed = not db_candidate.interviewed
+    db.commit()
+    db.refresh(db_candidate)
+    return db_candidate
 
 def delete_candidate(db: Session, candidate_id: int):
     db_candidate = get_candidate(db, candidate_id)
@@ -138,3 +149,28 @@ def delete_candidate(db: Session, candidate_id: int):
         db.delete(db_candidate)
         db.commit()
     return db_candidate
+
+def send_offer_letter(db: Session, candidate_id: int, salary: str, perks: str, other_details: str):
+    """Record that an offer letter has been sent to a candidate"""
+    db_candidate = get_candidate(db, candidate_id)
+    if not db_candidate:
+        return None
+    
+    # Create or update offer record
+    offer = db.query(models.OfferLetter).filter(models.OfferLetter.candidate_id == candidate_id).first()
+    if not offer:
+        offer = models.OfferLetter(
+            candidate_id=candidate_id,
+            salary=salary,
+            perks=perks,
+            other_details=other_details
+        )
+        db.add(offer)
+    else:
+        offer.salary = salary
+        offer.perks = perks
+        offer.other_details = other_details
+    
+    db.commit()
+    db.refresh(offer)
+    return offer

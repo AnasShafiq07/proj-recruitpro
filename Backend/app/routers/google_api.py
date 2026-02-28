@@ -1,22 +1,37 @@
 import base64
-from fastapi import APIRouter, Depends, HTTPException, Request
+import json
+import io
+import uuid
+import requests
+from datetime import datetime, timedelta, timezone
+from email.mime.text import MIMEText
+from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
-from datetime import datetime, timedelta, timezone
-import uuid, requests, os
-from email.mime.text import MIMEText
+import urllib.parse
+
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaIoBaseUpload
+from googleapiclient.errors import HttpError
+from google.oauth2.credentials import Credentials
+
 from app.db.session import get_db
-from app.db.models import HRManager, HRAvailability, Candidate, GoogleToken
+from app.db.models import HRManager, HRAvailability, GoogleToken
 from app.services.google_calendar import create_or_update_google_token, get_google_token, delete_google_token
-from app.services.hr_manager import get_hr_manager
-from app.schemas.google import EventCreate, EmailPayload, SchedulingDetails
+from app.schemas.google import EventCreate, EmailPayload, SchedulingDetails, OfferLetterPayload
 from app.core.security import get_current_hr
-from app.services.candidate import schedule_interview, update_meet_link
+from app.services.candidate import schedule_interview, update_meet_link, get_candidates_without_interview
 from app.services.hr_availability import get_selected_availability
-import json
-from app.services.candidate import get_candidates_without_interview
 from app.services.interview import create_interview
+from app.services.document_template import create_document_template, get_hr_template, delete_all_hr_templates
+from app.services.company import get_company
 from app.schemas.interview import InterviewCreate
+from email.mime.multipart import MIMEMultipart
+from email.mime.application import MIMEApplication
+from dotenv import load_dotenv
+import os
 
 WEEKDAY_MAP = {
     "Monday": 0, "Tuesday": 1, "Wednesday": 2, "Thursday": 3,
@@ -26,12 +41,12 @@ WEEKDAY_MAP = {
 
 router = APIRouter(prefix="/google", tags=["Google Calendar, Meet & Gmail"])
 
-CLIENT_ID = "399949611293-quv3hng1fe6mhnj3qin5e6rukk62vilr.apps.googleusercontent.com"
-CLIENT_SECRET = "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"
-REDIRECT_URI = "http://localhost:8000/google/auth/callback"
+load_dotenv()
+CLIENT_ID = os.getenv("CLIENT_ID")
+CLIENT_SECRET = os.getenv("CLIENT_SECRET")
+REDIRECT_URI = os.getenv("REDIRECT_URI")
 
-SCOPES = "openid email profile https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/gmail.send"
-
+SCOPES = "openid email profile https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/documents"
 
 
 def refresh_google_token(db: Session, hr_id: int, token: GoogleToken):
@@ -95,7 +110,7 @@ def login_google(db: Session = Depends(get_db), hr: HRManager = Depends(get_curr
         "https://accounts.google.com/o/oauth2/v2/auth"
         f"?response_type=code&client_id={CLIENT_ID}"
         f"&redirect_uri={REDIRECT_URI}"
-        f"&scope={SCOPES}"
+        f"&scope={urllib.parse.quote(SCOPES)}"
         f"&access_type=offline&prompt=consent"
         f"&state={hr.id}"
     )
@@ -149,7 +164,7 @@ def auth_callback(request: Request, code: str = None, error: str = None, state: 
         expires_in=expires_in
     )
     #print(f"expires_at: {token.expires_at}")
-    return RedirectResponse(url="http://localhost:8082/settings", status_code=302)
+    return RedirectResponse(url="http://localhost:8081/settings", status_code=302)
 
 @router.get("/auth/status")
 def auth_status(db: Session = Depends(get_db), hr: HRManager = Depends(get_current_hr)):
@@ -334,3 +349,184 @@ def send_email(payload: EmailPayload, db: Session = Depends(get_db), hr: HRManag
         "message": "Email sent successfully",
         "gmail_response": response.json()
     }
+
+
+@router.get("/offer-template")
+async def get_document_template(
+    db: Session = Depends(get_db), 
+    hr: HRManager = Depends(get_current_hr)
+):
+    template = get_hr_template(db, hr.id)
+    
+    if not template:
+        raise HTTPException(
+            status_code=404, 
+            detail="No offer template found. Please upload one first."
+        )
+    
+    return {
+        "template_id": template.template_id,
+        "google_doc_id": template.google_doc_id,
+        "view_link": f"https://docs.google.com/document/d/{template.google_doc_id}/edit",
+        "created_at": template.created_at
+    }
+
+@router.post("/upload-template")
+async def upload_and_convert_template(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    hr: HRManager = Depends(get_current_hr)
+):
+    delete_all_hr_templates(db, hr.id)
+    allowed_types = [
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document", # .docx
+        "application/pdf"
+    ]
+    if file.content_type not in allowed_types:
+        raise HTTPException(status_code=400, detail="Invalid file type. Please upload .docx or .pdf")
+
+    try:
+        # Ensure HR has a valid Google token and build Credentials
+        token_obj = get_valid_token(db, hr.id)
+        creds = Credentials(
+            token=token_obj.access_token,
+            refresh_token=token_obj.refresh_token,
+            token_uri="https://oauth2.googleapis.com/token",
+            client_id=CLIENT_ID,
+            client_secret=CLIENT_SECRET,
+            scopes=["https://www.googleapis.com/auth/drive.file"]
+        )
+
+        service = build('drive', 'v3', credentials=creds)
+
+        # 2. Prepare Metadata
+        # We tell Google: "Store this as a Google Doc"
+        file_metadata = {
+            'name': file.filename.rsplit('.', 1)[0], # Remove extension from name
+            'mimeType': 'application/vnd.google-apps.document' 
+        }
+
+        # 3. Stream the file directly from memory
+        file_content = await file.read()
+        media = MediaIoBaseUpload(
+            io.BytesIO(file_content), 
+            mimetype=file.content_type, 
+            resumable=True
+        )
+
+        # 4. Execute Upload & Conversion
+        uploaded_file = service.files().create(
+            body=file_metadata,
+            media_body=media,
+            fields='id'
+        ).execute()
+
+        # Save this ID to your DB to use as a template later
+        template_id = uploaded_file.get('id')
+        create_document_template(db, hr.id, template_id)
+        return {
+            "message": "Template uploaded and converted successfully",
+            "google_doc_id": template_id
+        }
+
+    except HttpError as he:
+        # Surface Google API errors for easier debugging
+        try:
+            content = he.content.decode('utf-8') if hasattr(he, 'content') and he.content else str(he)
+            print(f"Upload HttpError: {content}")
+            detail = json.loads(content)
+        except Exception:
+            detail = {'error': str(he)}
+        raise HTTPException(status_code=getattr(he, 'resp', {}).status if hasattr(he, 'resp') else 500, detail=detail)
+    except Exception as e:
+        # Log the error for debugging
+        print(f"Upload Error: {e}")
+        raise HTTPException(status_code=500, detail={"error": str(e)})
+    
+
+
+@router.post("/send-offer-letter")
+async def send_customized_offer(
+    payload: OfferLetterPayload, 
+    db: Session = Depends(get_db), 
+    hr: HRManager = Depends(get_current_hr)
+):
+    # 1. Validate Token & Get Template
+    token_obj = get_valid_token(db, hr.id)
+    template = get_hr_template(db, hr.id)
+    if not template:
+        raise HTTPException(status_code=404, detail="No offer template found.")
+
+    creds = Credentials(
+        token=token_obj.access_token,
+        refresh_token=token_obj.refresh_token,
+        token_uri="https://oauth2.googleapis.com/token",
+        client_id=CLIENT_ID,
+        client_secret=CLIENT_SECRET
+    )
+
+    try:
+        drive_service = build('drive', 'v3', credentials=creds)
+        docs_service = build('docs', 'v1', credentials=creds)
+        gmail_service = build('gmail', 'v1', credentials=creds)
+
+        # 2. Copy the Template to a temporary file
+        copy_title = f"Offer_Letter_{payload.candidate_id}_{uuid.uuid4().hex[:6]}"
+        cloned_file = drive_service.files().copy(
+            fileId=template.google_doc_id,
+            body={'name': copy_title}
+        ).execute()
+        new_doc_id = cloned_file.get('id')
+
+        # 3. Create 'Batch Update' requests for placeholders
+        # payload.replacements should look like {"{{salary}}": "5000", "{{role}}": "Dev"}
+        requests = [
+            {
+                'replaceAllText': {
+                    'containsText': {'text': key, 'matchCase': True},
+                    'replaceText': value,
+                }
+            } for key, value in payload.replacements.items()
+        ]
+
+        docs_service.documents().batchUpdate(
+            documentId=new_doc_id, 
+            body={'requests': requests}
+        ).execute()
+
+        # 4. Export the customized Doc as a PDF
+        pdf_content = drive_service.files().export(
+            fileId=new_doc_id,
+            mimeType='application/pdf'
+        ).execute()
+
+        # 5. Prepare Email with Attachment
+        company = get_company(db, hr.company_id)
+        message = MIMEMultipart()
+        message['to'] = payload.candidate_email
+        message['subject'] = f"Offer letter from {company.name}"
+        
+        # Body text
+        msg_body = MIMEText(f"Hello,\n\nPlease find your customized offer letter attached.\n\nBest regards,\n{hr.name}")
+        message.attach(msg_body)
+
+        # PDF Attachment
+        part = MIMEApplication(pdf_content, Name=f"Offer_Letter.pdf")
+        part['Content-Disposition'] = f'attachment; filename="Offer_Letter.pdf"'
+        message.attach(part)
+
+        # Encode and Send
+        raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode("utf-8")
+        gmail_service.users().messages().send(
+            userId="me", 
+            body={'raw': raw_message}
+        ).execute()
+
+        # 6. Cleanup: Delete the temporary cloned doc
+        #drive_service.files().delete(fileId=new_doc_id).execute()
+
+        return {"status": "success", "message": f"Customized offer sent to {payload.candidate_email}"}
+
+    except Exception as e:
+        print(f"Error in Offer Flow: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))

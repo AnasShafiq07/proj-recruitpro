@@ -56,18 +56,12 @@ const getStatusColor = (status: boolean) => {
   else return "bg-warning/10 text-warning border border-warning/20";
 };
 
-interface Selected {
-  id: number;
-  selected: boolean;
-}
-
 const Candidates = () => {
   const navigate = useNavigate();
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [searchParams] = useSearchParams();
   const [jobId, setJobId] = useState<string>();
   const [job, setJob] = useState<Job>();
-  const [currSelected, setSelected] = useState<Selected>();
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
   const [scheduleSummary, setScheduleSummary] = useState("");
   const [scheduleDescription, setScheduleDescription] = useState("");
@@ -120,26 +114,6 @@ const Candidates = () => {
     fetchAvailability();
   }, [searchParams]);
 
-  const selectCandidate = async (cand_id: number) => {
-    setCandidates((prev) =>
-      prev.map((c) =>
-        c.candidate_id === cand_id ? { ...c, selected: true } : c
-      )
-    );
-
-    try {
-      await candidateApi.final_selection(cand_id);
-      setSelected({ id: cand_id, selected: true });
-    } catch (error) {
-      console.error("Error selecting candidate:", error);
-      setCandidates((prev) =>
-        prev.map((c) =>
-          c.candidate_id === cand_id ? { ...c, selected: false } : c
-        )
-      );
-    }
-  };
-
   const handleScheduleAllClick = () => {
     setIsScheduleModalOpen(true);
   };
@@ -163,26 +137,6 @@ const Candidates = () => {
       console.error("Error scheduling interviews:", error);
     } finally {
       setIsScheduling(false);
-    }
-  };
-
-  const deSelectCandidate = async (cand_id: number) => {
-    setCandidates((prev) =>
-      prev.map((c) =>
-        c.candidate_id === cand_id ? { ...c, selected: false } : c
-      )
-    );
-
-    try {
-      await candidateApi.de_select(cand_id);
-      setSelected({ id: cand_id, selected: false });
-    } catch (error) {
-      console.error("Error deselecting candidate:", error);
-      setCandidates((prev) =>
-        prev.map((c) =>
-          c.candidate_id === cand_id ? { ...c, selected: true } : c
-        )
-      );
     }
   };
 
@@ -494,17 +448,6 @@ const Candidates = () => {
                             }
                           >
                             View Details
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant={candidate.selected === true ? "outline" : "default"}
-                            onClick={() => {
-                              if (candidate.selected === true)
-                                deSelectCandidate(candidate.candidate_id);
-                              else selectCandidate(candidate.candidate_id);
-                            }}
-                          >
-                            {candidate.selected === true ? "Deselect" : "Select"}
                           </Button>
                         </div>
                       </TableCell>

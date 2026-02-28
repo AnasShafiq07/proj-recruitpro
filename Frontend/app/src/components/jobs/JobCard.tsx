@@ -9,6 +9,8 @@ interface JobCardProps {
   onClick?: () => void;
 }
 
+
+
 export const JobCard = ({ job, onClick }: JobCardProps) => {
   const {
     title,
