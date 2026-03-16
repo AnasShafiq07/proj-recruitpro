@@ -95,7 +95,7 @@ const CreateJob = () => {
     try {
       const resData = await jobApi.createJob(jobData);
 
-      setLinkToShare(`${window.location.origin}/apply` + resData.job_link);
+      setLinkToShare(`${window.location.origin}/apply/` + resData.job_link);
 
       toast({
         title: "Success!",

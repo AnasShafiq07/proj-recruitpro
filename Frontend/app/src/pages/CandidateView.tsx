@@ -46,7 +46,7 @@ const CSS = `
 
   .cv-root {
     font-family: 'DM Sans', sans-serif;
-    background: #F5F4F1;
+    background: #ffffff;
     min-height: 100vh;
     color: #1A1916;
   }
@@ -91,6 +91,9 @@ const CSS = `
   .cv-btn-outline:hover { background: #F5F4F1; }
   .cv-btn-dark { background: #1A1916; color: #fff; }
   .cv-btn-dark:hover { background: #2D2C28; }
+  /* Use app blue for primary filled buttons */
+  .cv-btn-dark { background: #1D4ED8; color: #fff; }
+  .cv-btn-dark:hover { background: #1E40AF; }
   .cv-btn-green { background: #E8F5EF; color: #1A6B4A; border: 1px solid #BBE4D4 !important; }
   .cv-btn-green:hover { background: #D1EDE0; }
   .cv-btn-ghost {
@@ -224,26 +227,26 @@ const CSS = `
     cursor: pointer; transition: all 0.15s ease;
   }
   .cv-journey-step:hover { background: #F5F4F1; }
-  .cv-journey-step.active { background: #F0FDF7; border-color: #BBE4D4; }
+  .cv-journey-step.active { background: #d6dce8; border-color: #56a5d3; }
   .cv-journey-icon {
     width: 34px; height: 34px; border-radius: 8px;
     display: flex; align-items: center; justify-content: center; flex-shrink: 0;
   }
-  .cv-journey-step.active .cv-journey-icon { background: #1A6B4A; color: #fff; }
+  .cv-journey-step.active .cv-journey-icon { background: #2F6FE4; color: #fff; }
   .cv-journey-step:not(.active) .cv-journey-icon { background: #F5F4F1; color: #9E9A91; }
   .cv-journey-lbl { font-size: 13px; font-weight: 600; color: #1A1916; }
   .cv-journey-sub { font-size: 11px; color: #9E9A91; font-weight: 500; margin-top: 1px; }
-  .cv-journey-check { margin-left: auto; color: #1A6B4A; flex-shrink: 0; }
+  .cv-journey-check { margin-left: auto; color: #2F6FE4; flex-shrink: 0; }
   .cv-offer-btn {
     margin-top: 8px; width: 100%; height: 44px;
-    background: #1A1916; color: #fff;
+    background: #1D4ED8; color: #fff;
     border: none; border-radius: 12px;
     font-family: 'DM Sans', sans-serif;
     font-size: 13px; font-weight: 600;
     cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
     transition: background 0.15s ease;
   }
-  .cv-offer-btn:hover { background: #2D2C28; }
+  .cv-offer-btn:hover { background: #1E40AF; }
 
   /* ── Tabs ── */
   .cv-tab-bar {
@@ -350,7 +353,6 @@ const CSS = `
   .cv-iframe { width: 100%; height: 100%; border: none; display: block; }
 `;
 
-// ─── Tiny helper components ───────────────────────────────────────────────────
 
 const StatusPill = ({
   status,
@@ -378,7 +380,7 @@ const CandidateView = () => {
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [showResumeModal, setShowResumeModal] = useState(false);
-
+  const [candidateT, setCandidateT] = useState(null);
   const [resumeBlobUrl, setResumeBlobUrl] = useState<string | null>(null);
   const [interviewForm, setInterviewForm] = useState({
     summary: "",
@@ -398,6 +400,8 @@ const CandidateView = () => {
     try {
       setLoading(true);
       const data = await candidateViewApi.getCandidateById(id);
+      const times = await candidateViewApi.getInterviewTime(id);
+      setCandidateT(times)
       setCandidate(data);
       setInterviewForm((f) => ({ ...f, summary: `Interview: ${data.name}` }));
       if (data.job_id) setQuestions(await jobApi.getJobQuestions(data.job_id));
@@ -535,8 +539,8 @@ const CandidateView = () => {
               className="cv-btn"
               style={{
                 background: candidate.selected_for_interview
-                  ? "#1A6B4A"
-                  : "#1A1916",
+                  ? "#1D4ED8"
+                  : "#2563EB",
                 color: "#fff",
               }}
               onClick={() =>
@@ -580,7 +584,6 @@ const CandidateView = () => {
                     <span className="cv-score-dot">{aiScore}%</span>
                   )}
                 </div>
-                <StatusPill status="green" label="Available" />
               </div>
               <div className="cv-profile-name">{candidate.name}</div>
               <div className="cv-profile-id">ID: {candidate.candidate_id}</div>
@@ -672,6 +675,54 @@ const CandidateView = () => {
               </div>
             </div>
 
+            {/* Scheduled Interview Details Card */}
+{candidate.interview_scheduled && (
+  <div className="cv-card" style={{ background: '#F0F7FF', borderColor: '#BFDBFE' }}>
+    <div className="cv-card-header" style={{ borderBottomColor: '#DBEAFE' }}>
+      <div className="cv-card-header-icon" style={{ background: '#DBEAFE', color: '#1D4ED8' }}>
+        <Video size={15} />
+      </div>
+      <span className="cv-card-header-title" style={{ color: '#1E40AF' }}>
+        Confirmed Interview
+      </span>
+    </div>
+    <div style={{ padding: '20px' }}>
+      <div style={{ marginBottom: '16px' }}>
+        <div style={{ fontSize: '14px', fontWeight: 700, color: '#1A1916', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Clock size={14} className="text-blue-500" />
+          {new Date(candidateT.scheduled_time!).toLocaleTimeString('en-US', { 
+            hour: 'numeric', 
+            minute: '2-digit', 
+            hour12: true 
+          })}
+        </div>
+        <div style={{ fontSize: '12px', color: '#6B675E', fontWeight: 500, marginTop: '4px', marginLeft: '22px' }}>
+          {new Date(candidateT.scheduled_time!).toLocaleDateString('en-US', { 
+            weekday: 'short', 
+            month: 'short', 
+            day: 'numeric' 
+          })}
+        </div>
+      </div>
+
+      {candidate.meet_link ? (
+        <a 
+          href={candidate.meet_link} 
+          target="_blank" 
+          rel="noreferrer" 
+          className="cv-offer-btn"
+          style={{ textDecoration: 'none', background: '#2563EB' }}
+        >
+          <Video size={14} /> Join Google Meet
+        </a>
+      ) : (
+        <div style={{ fontSize: '11px', color: '#60A5FA', fontStyle: 'italic', textAlign: 'center' }}>
+          Meeting link syncing...
+        </div>
+      )}
+    </div>
+  </div>
+)}
             {/* Recruitment Journey */}
             <div className="cv-card">
               <div className="cv-card-header">

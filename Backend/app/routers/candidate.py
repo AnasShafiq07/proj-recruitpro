@@ -2,11 +2,13 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 from app.db.session import get_db
+from sqlalchemy import desc
+from app.db.models import Candidate, Interview
 from app.schemas.candidate import (
     CandidateCreate,
     CandidateUpdate,
     CandidateOut,
-    CandidateCreateWithAnswersAndPayment,
+    CandidateCreateWithAnswersAndPayment, 
 )
 from app.services.candidate import (
     create_candidate,
@@ -23,19 +25,22 @@ from app.services.candidate import (
     get_candidates_without_interview as candidates_without_interview,
     update_interviewed_status,
     send_offer_letter,
-    select_for_interview
+    select_for_interview,
+    send_gmail_message
 )
+from app.services.google_calendar import get_google_token
 from app.services.job import increment_applicants
 from app.services.payment import create_stripe_payment_intent, create_payment_record
 from app.db import models
 from app.core.security import get_current_hr
+from fastapi import BackgroundTasks
 
 router = APIRouter(prefix="/candidates", tags=["Candidates"])
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
 def create_candidate_endpoint(
-    candidate: CandidateCreateWithAnswersAndPayment, db: Session = Depends(get_db)
+    candidate: CandidateCreateWithAnswersAndPayment, background_tasks: BackgroundTasks, db: Session = Depends(get_db)
 ):
     # Create candidate (prescreen + CV first)
     db_candidate = create_candidate(db, candidate)
@@ -65,6 +70,18 @@ def create_candidate_endpoint(
     #         "payment_record": db_payment,
     #     }
     # else:
+    token = get_google_token(db, job.hr_id) 
+    
+    if token:
+        email_content = f"Hi {db_candidate.name},\n\nThank you for applying! Your application for {job.title} has been submitted."
+        
+    background_tasks.add_task(
+            send_gmail_message,
+            access_token=token.access_token,
+            recipient=db_candidate.email,
+            subject="Application Submitted",
+            content=email_content
+        )
     return {
         "candidate": {
             "candidate_id": db_candidate.candidate_id,
@@ -224,3 +241,48 @@ def delete_candidate_endpoint(candidate_id: int, db: Session = Depends(get_db)):
     if not deleted:
         raise HTTPException(status_code=404, detail="Candidate not found")
     return None
+
+
+from sqlalchemy import desc
+
+@router.get("/get-interview-time/{candidate_id}")
+def get_candidate_details(candidate_id: int, db: Session = Depends(get_db)):
+    # 1. Fetch Candidate
+    candidate = db.query(Candidate).filter(Candidate.candidate_id == candidate_id).first()
+    
+    # 2. Get the latest scheduled interview
+    latest_interview = (
+        db.query(Interview)
+        .filter(
+            Interview.candidate_id == candidate_id,
+            Interview.status == "Scheduled",
+            Interview.scheduled_time is not None
+        )
+        .order_by(desc(Interview.scheduled_time))
+        .first()
+    )
+
+    # 3. Robust Check for Time
+    # Initialize defaults
+    scheduled_time_iso = None
+    meet_link = None
+
+    if latest_interview:
+        # Check if the attribute scheduled_time actually has a value
+        if latest_interview.scheduled_time:
+            # Explicitly convert to ISO string for Frontend compatibility
+            scheduled_time_iso = latest_interview.scheduled_time.isoformat()
+            meet_link = latest_interview.meet_link
+    else:
+        print(f"DEBUG: No 'Scheduled' interview found for candidate {candidate_id}")
+    formatted_time = None
+    if latest_interview:
+        meet_link = latest_interview.meet_link
+        if latest_interview.scheduled_time:
+            formatted_time = latest_interview.scheduled_time
+
+    return {
+        "candidate": candidate,
+        "scheduled_time": formatted_time, 
+        "meet_link": meet_link
+    }

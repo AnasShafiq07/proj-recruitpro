@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 from email.mime.text import MIMEText
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, BackgroundTasks
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 import urllib.parse
@@ -32,6 +32,16 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
 from dotenv import load_dotenv
 import os
+
+from app.services.interview_slot import create_google_calendar_event
+from app.schemas.interview_slot import GenerateSlotsRequest, AvailableSlotResponse, BookSlotRequest, BulkInvitePayload
+from app.db.models import InterviewSlot, Interview, Candidate, Job
+from typing import List
+
+
+from email.mime.text import MIMEText
+import requests
+
 
 WEEKDAY_MAP = {
     "Monday": 0, "Tuesday": 1, "Wednesday": 2, "Thursday": 3,
@@ -530,3 +540,220 @@ async def send_customized_offer(
     except Exception as e:
         print(f"Error in Offer Flow: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+    
+
+
+@router.post("/hr/generate-slots")
+def seed_interview_slots(req: GenerateSlotsRequest, db: Session = Depends(get_db)):
+    availability = db.query(HRAvailability).filter(HRAvailability.id == req.availability_id).first()
+    if not availability:
+        raise HTTPException(status_code=404, detail="Availability settings not found")
+
+    days = json.loads(availability.days)
+    current_date = availability.start_date
+    duration = timedelta(minutes=availability.duration_minutes)
+    break_time = timedelta(minutes=availability.break_minutes)
+
+    created_slots = 0
+    while current_date <= availability.end_date:
+        if current_date.strftime("%A") in days:
+            # Generate slots within the start/end time window for that day
+            # This is a simplified version of your original loop
+            current_time = datetime.strptime(availability.start_time, "%H:%M")
+            end_window = datetime.strptime(availability.end_time, "%H:%M")
+
+            while current_time + duration <= end_window:
+                new_slot = InterviewSlot(
+                    availability_id=availability.id,
+                    date=current_date,
+                    start_time=current_time.strftime("%H:%M"),
+                    end_time=(current_time + duration).strftime("%H:%M"),
+                    is_booked=False
+                )
+                db.add(new_slot)
+                current_time += duration + break_time
+                created_slots += 1
+
+        current_date += timedelta(days=1)
+    
+    db.commit()
+    return {"message": f"Successfully generated {created_slots} available slots."}
+
+
+# --- 1. GET AVAILABLE SLOTS ---
+@router.get("/candidates/slots/{job_id}/{candidate_id}", response_model=List[AvailableSlotResponse])
+def get_open_slots(job_id: int, candidate_id: int, db: Session = Depends(get_db)):
+    # 1. Verify Candidate exists and link is not expired
+    candidate = db.query(Candidate).filter(Candidate.candidate_id == candidate_id).first()
+    if not candidate or not candidate.invited_at:
+        raise HTTPException(status_code=404, detail="Invalid invitation link.")
+
+    # 2. 48-Hour Expiry Logic
+    # Ensure both are offset-aware or both naive for comparison
+    invited_time = candidate.invited_at.replace(tzinfo=timezone.utc)
+    if datetime.now(timezone.utc) > invited_time + timedelta(hours=48):
+        raise HTTPException(status_code=403, detail="Invitation link has expired.")
+
+    # 3. Get all available slots for the active HR availability
+    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+    slots = db.query(InterviewSlot).join(HRAvailability).join(HRManager).join(Job).filter(
+        Job.job_id == job_id,
+        InterviewSlot.is_booked == False,
+        InterviewSlot.date >= now_utc,
+        HRAvailability.is_selected == True
+    ).all()
+    
+    return slots
+
+# --- 2. BOOK A SLOT ---
+@router.post("/candidates/book/{slot_id}")
+def book_slot(slot_id: int, req: BookSlotRequest, db: Session = Depends(get_db)):
+    # 1. Fetch Candidate and check Expiry again for security
+    candidate = db.query(Candidate).filter(Candidate.candidate_id == req.candidate_id).first()
+    if not candidate or not candidate.invited_at:
+         raise HTTPException(status_code=404, detail="Candidate not found")
+    
+    invited_time = candidate.invited_at.replace(tzinfo=timezone.utc)
+    if datetime.now(timezone.utc) > invited_time + timedelta(hours=48):
+        raise HTTPException(status_code=403, detail="Link expired.")
+
+    # 2. Prevent Double Booking for the same job
+    existing_booking = db.query(Interview).filter(
+        Interview.candidate_id == req.candidate_id,
+        Interview.job_id == candidate.job_id,
+        Interview.status == "Scheduled"
+    ).first()
+    if existing_booking:
+        raise HTTPException(status_code=400, detail="You already have an interview scheduled.")
+
+    # 3. Lock the specific slot to prevent race conditions
+    slot = db.query(InterviewSlot).filter(InterviewSlot.id == slot_id).with_for_update().first()
+    if not slot or slot.is_booked:
+        raise HTTPException(status_code=400, detail="This slot is no longer available.")
+
+    try:
+        # 4. Google Calendar Integration
+        hr_id = slot.availability.hr_id
+        google_event = create_google_calendar_event(db, slot, req.email, hr_id)
+        meet_link = google_event.get("hangoutLink")
+
+        # 5. Atomic Update
+        slot.is_booked = True
+        new_interview = Interview(
+            candidate_id=candidate.candidate_id,
+            job_id=candidate.job_id,
+            scheduled_time=datetime.combine(slot.date.date(), datetime.strptime(slot.start_time, "%H:%M").time()),
+            meet_link=meet_link,
+            slot_id=slot.id,
+            status="Scheduled"
+        )
+        
+        candidate.interview_scheduled = True
+        candidate.meet_link = meet_link
+
+        db.add(new_interview)
+        db.commit()
+
+        return {"message": "Booked successfully", "meet_link": meet_link}
+        
+    except Exception as e:
+        db.rollback() 
+        raise HTTPException(status_code=500, detail=f"Google Integration Failed: {str(e)}")
+
+# --- 3. SEND BULK INVITES ---
+@router.post("/send-bulk-invites")
+def send_bulk_invites(
+    payload: BulkInvitePayload, 
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db), 
+    hr: HRManager = Depends(get_current_hr)
+):
+    availability = get_selected_availability(db, hr.id)
+    if not availability:
+        raise HTTPException(status_code=400, detail="HR availability not configured")
+
+    token = get_valid_token(db, hr.id)
+    if not token:
+        raise HTTPException(status_code=401, detail="HR not authenticated with Google")
+
+    # A. Generate Slots (Only if they don't already exist for these dates)
+    days = json.loads(availability.days)
+    duration = timedelta(minutes=availability.duration_minutes)
+    break_time = timedelta(minutes=availability.break_minutes)
+    start_time_obj = datetime.strptime(availability.start_time, "%H:%M").time()
+    end_time_obj = datetime.strptime(availability.end_time, "%H:%M").time()
+
+    current_date = availability.start_date.date()
+    while current_date <= availability.end_date.date():
+        if current_date.strftime("%A") in days:
+            current_start = datetime.combine(current_date, start_time_obj)
+            current_end = datetime.combine(current_date, end_time_obj)
+
+            while current_start + duration <= current_end:
+                exists = db.query(InterviewSlot).filter(
+                    InterviewSlot.availability_id == availability.id,
+                    InterviewSlot.date == current_start
+                ).first()
+                if not exists:
+                    db.add(InterviewSlot(
+                        availability_id=availability.id,
+                        date=current_start,
+                        start_time=current_start.strftime("%H:%M"),
+                        end_time=(current_start + duration).strftime("%H:%M"),
+                        is_booked=False
+                    ))
+                current_start += duration + break_time
+        current_date += timedelta(days=1)
+
+    # B. Update Candidate 'invited_at' to start 48h timer
+    candidates = db.query(Candidate).filter(Candidate.candidate_id.in_(payload.candidate_ids)).all()
+    for candidate in candidates:
+        candidate.invited_at = datetime.now(timezone.utc)
+    
+    db.commit()
+
+    # C. Background Emailing
+    background_tasks.add_task(
+        process_email_invites, 
+        candidates, 
+        payload.job_id, 
+        payload.subject, 
+        token.access_token, 
+        hr.name
+    )
+
+    return {"message": f"Invites sent to {len(candidates)} candidates."}
+
+# --- 4. GMAIL HELPER ---
+def process_email_invites(candidates: List[Candidate], job_id: int, subject: str, access_token: str, hr_name: str):
+    headers = {"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"}
+
+    for candidate in candidates:
+        # Construct link with BOTH job_id and candidate_id for the dynamic route
+        scheduling_link = f"http://localhost:8081/select-slot/{job_id}/{candidate.candidate_id}"
+        
+        email_content = f"""
+        <html>
+            <body style="font-family: sans-serif; color: #333;">
+                <div style="max-width: 600px; margin: auto; border: 1px solid #eee; padding: 20px; border-radius: 10px;">
+                    <h2 style="color: #4F46E5;">Interview Invitation</h2>
+                    <p>Hi {candidate.name},</p>
+                    <p>Please select an interview time slot using the button below. <b>Note: This link expires in 48 hours.</b></p>
+                    <div style="text-align: center; margin: 30px 0;">
+                        <a href="{scheduling_link}" style="background-color: #4F46E5; color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: bold;">Select Time Slot</a>
+                    </div>
+                    <p>Best regards,<br><strong>{hr_name}</strong></p>
+                </div>
+            </body>
+        </html>
+        """
+        message = MIMEText(email_content, "html")
+        message["to"] = candidate.email
+        message["subject"] = subject
+        raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode("utf-8")
+
+        requests.post(
+            "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
+            headers=headers,
+            json={"raw": raw_message}
+        )

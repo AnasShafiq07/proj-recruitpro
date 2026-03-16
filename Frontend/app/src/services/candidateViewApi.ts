@@ -2,6 +2,8 @@ import { API_CONFIG } from "@/config";
 
 const API_BASE_URL = API_CONFIG.BASE_URL;
 
+// --- Interfaces ---
+
 export interface InterviewSchedulePayload {
   candidate_id: number;
   job_id: number;
@@ -25,7 +27,6 @@ export interface Answer {
 }
 
 export interface CandidateWithAnswers {
-  interviewed: any;
   candidate_id: number;
   job_id: number;
   company_id?: number | null;
@@ -33,18 +34,20 @@ export interface CandidateWithAnswers {
   email: string;
   phone?: string | null;
   location?: string | null;
-
   skills?: string | null;
   experience?: string | null;
   education?: string | null;
-  
   ai_score?: number | null;
   resume_url: string;
+  
+  // These fields now exist to resolve TS errors in CandidateView
+  scheduled_time?: string | null; 
   meet_link?: string | null;
-
-  selected_for_interview?: boolean | null;
-  selected?: boolean | null;
+  invited_at?: string | null;
   interview_scheduled?: boolean | null;
+  interviewed?: boolean | null;
+  selected?: boolean | null;
+  selected_for_interview?: boolean | null;
   created_at?: string | null;
 
   answers?: Answer[];
@@ -55,24 +58,25 @@ interface RawBackendResponse {
   answers: Answer[];
 }
 
+export interface InterviewTimeResponse {
+  candidate: any;
+  scheduled_time: string | null;
+  meet_link: string | null;
+}
+
 export interface OfferLetterPayload {
-  // Required candidate details
   name: string;
   designation: string;
   salary: string;
-  
-  // Logistics
-  start_date: string; // Use string to handle ISO format or "YYYY-MM-DD"
-  expiry_date?: string; // Optional: When the offer expires
-  
-  // Perks and Details
+  start_date: string;
+  expiry_date?: string;
   joining_bonus?: string;
   reporting_to?: string;
   location?: string;
-  
-  // The specific template ID to use (from your Google Drive)
   google_doc_id: string; 
 }
+
+// --- API Implementation ---
 
 export const candidateViewApi = {
   
@@ -106,8 +110,23 @@ export const candidateViewApi = {
       ...rawData.candidate, 
       answers: rawData.answers 
     };
-    console.log("mapped data",mappedData.resume_url);
     return mappedData;
+  },
+
+  async getInterviewTime(candidateId: string | number): Promise<InterviewTimeResponse> {
+    const response = await fetch(`${API_BASE_URL}/candidates/get-interview-time/${candidateId}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${localStorage.getItem('authToken')}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || "Failed to fetch interview details");
+    }
+    return await response.json();
   },
 
   async scheduleInterview(data: InterviewSchedulePayload): Promise<any> {
@@ -144,7 +163,6 @@ export const candidateViewApi = {
   },
 
   async getResumeBlob(resumeUrl: string): Promise<{ url: string; blob: Blob }> {
-    
     const fetchUrl = resumeUrl.startsWith('http') ? resumeUrl : `${API_BASE_URL}${resumeUrl}`;
     const res = await fetch(fetchUrl, {
       headers: {
@@ -162,80 +180,7 @@ export const candidateViewApi = {
     return { url, blob };
   },
 
-  async sendOfferLetter(candidateId: number, data: {
-    salary: string;
-    perks: string;
-    other_details: string;
-  }): Promise<any> {
-    const response = await fetch(`${API_BASE_URL}/candidates/${candidateId}/send-offer`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-      },
-      body: JSON.stringify(data),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Failed to send offer letter');
-    }
-    return response.json();
-  },
-
-  async selectForInterview(candidateId: number): Promise<boolean> {
-    const response = await fetch(`${API_BASE_URL}/candidates/select-for-interview/${candidateId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-      },
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Failed to select candidate for interview');
-    }
-    return response.json();
-  },
-
-  async uploadOfferTemplate(file: File): Promise<{
-    view_link: string; google_doc_id: string; message: string 
-}> {
-    const formData = new FormData();
-    formData.append("file", file);
-
-    const response = await fetch(`${API_BASE_URL}/google/upload-template`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-        // Do NOT set 'Content-Type' here, the browser sets it for FormData
-      },
-      body: formData,
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Failed to upload template');
-    }
-    return response.json();
-  },
-  async getOfferTemplate(): Promise<{ google_doc_id: string; view_link: string }> {
-  const response = await fetch(`${API_BASE_URL}/google/offer-template`, {
-    method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-    },
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || 'Failed to fetch template');
-  }
-  return response.json();
-  },
-
- async generateAndSendOffer(candidateId: number, candidateEmail: string, replacements: Record<string, string>): Promise<any> {
+  async generateAndSendOffer(candidateId: number, candidateEmail: string, replacements: Record<string, string>): Promise<any> {
     const response = await fetch(`${API_BASE_URL}/google/send-offer-letter`, {
       method: 'POST',
       headers: {
@@ -245,7 +190,7 @@ export const candidateViewApi = {
       body: JSON.stringify({
         candidate_id: candidateId,
         candidate_email: candidateEmail,
-        replacements: replacements, // e.g., {"{{salary}}": "50,000", "{{role}}": "Backend Dev"}
+        replacements: replacements,
         subject: "Your Official Offer Letter from RecruitPro"
       }),
     });
@@ -255,5 +200,41 @@ export const candidateViewApi = {
       throw new Error(error.detail || 'Failed to process and send offer letter');
     }
     return response.json();
-}
+  },
+
+  async getOfferTemplate(): Promise<{ google_doc_id: string; view_link: string }> {
+    const response = await fetch(`${API_BASE_URL}/google/offer-template`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to fetch template');
+    }
+    return response.json();
+  },
+
+  async uploadOfferTemplate(file: File): Promise<{
+    view_link: string; google_doc_id: string; message: string 
+  }> {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await fetch(`${API_BASE_URL}/google/upload-template`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to upload template');
+    }
+    return response.json();
+  }
 };

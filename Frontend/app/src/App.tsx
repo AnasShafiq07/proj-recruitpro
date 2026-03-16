@@ -17,6 +17,8 @@ import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import ApplyJob from "./pages/ApplyJob";
 import CandidateView from "./pages/CandidateView";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
+import InterviewScheduler from "./pages/SlotSchedular";
 
 const queryClient = new QueryClient();
 
@@ -29,17 +31,20 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/jobs" element={<Jobs />} />
-          <Route path="/jobs/create" element={<CreateJob />} />
-          <Route path="/department" element={<DepartmentForm />}/>
-          <Route path="/candidates" element={<Candidates />} />
-          <Route path="/candidates/view" element={<CandidateView />}/>
-          <Route path="/schedule" element={<Schedule />} />
-          <Route path="/offers" element={<Offers />} />
-          <Route path="/internal" element={<Internal />} />
-          <Route path="/settings" element={<Settings />} />
           <Route path="/apply/:slug" element={<ApplyJob />} />
+          <Route path="select-slot/:jobId/:candidateId" element={<InterviewScheduler/>}/>
+          <Route element={<ProtectedRoute />}>
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/jobs" element={<Jobs />} />
+            <Route path="/jobs/create" element={<CreateJob />} />
+            <Route path="/department" element={<DepartmentForm />} />
+            <Route path="/candidates" element={<Candidates />} />
+            <Route path="/candidates/view" element={<CandidateView />} />
+            <Route path="/schedule" element={<Schedule />} />
+            <Route path="/offers" element={<Offers />} />
+            <Route path="/internal" element={<Internal />} />
+            <Route path="/settings" element={<Settings />} />
+          </Route>
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

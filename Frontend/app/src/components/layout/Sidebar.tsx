@@ -26,7 +26,7 @@ const menuItems = [
   { icon: Users, label: "Candidates", path: "/candidates" },
   { icon: Calendar, label: "Interview Scheduling", path: "/schedule" },
   { icon: FileText, label: "Offer Letters", path: "/offers" },
-  { icon: Building2, label: "Internal Hiring", path: "/internal" },
+  // { icon: Building2, label: "Internal Hiring", path: "/internal" },
 ];
 
 const bottomItems = [

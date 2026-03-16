@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { 
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger 
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,6 +43,7 @@ export const OfferLetterModal = ({
   });
 
   const [isSending, setIsSending] = useState(false);
+  const [showPreviewMobile, setShowPreviewMobile] = useState(false);
 
   const handleSend = async () => {
     if (!formData.salary || !formData.joiningDate) {
@@ -86,10 +87,32 @@ export const OfferLetterModal = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl p-0 rounded-[2rem] overflow-hidden border-none shadow-2xl flex flex-col md:flex-row h-[90vh]">
+      <DialogContent className="w-[95vw] max-w-[1100px] md:max-w-6xl p-0 rounded-[1rem] md:rounded-[2rem] overflow-hidden border-none shadow-2xl flex flex-col md:flex-row h-[90vh]">
+        {/* Mobile toggle: show either Edit form or Preview on small screens */}
+        <div className="md:hidden flex items-center justify-between p-3 border-b bg-white">
+          <div className="flex items-center gap-2">
+            <Button
+              variant={showPreviewMobile ? "ghost" : undefined}
+              className="px-3 py-1"
+              onClick={() => setShowPreviewMobile(false)}
+            >
+              Edit
+            </Button>
+            <Button
+              variant={showPreviewMobile ? undefined : "ghost"}
+              className="px-3 py-1"
+              onClick={() => setShowPreviewMobile(true)}
+            >
+              Preview
+            </Button>
+          </div>
+          <Button variant="ghost" className="text-slate-500" onClick={onClose}>
+            Close
+          </Button>
+        </div>
         
         {/* Left Side: Form (Scrollable) */}
-        <div className="w-full md:w-5/12 p-8 space-y-6 overflow-y-auto bg-white border-r border-slate-100">
+        <div className={`w-full md:w-5/12 p-6 md:p-8 space-y-6 overflow-y-auto bg-white border-r border-slate-100 ${showPreviewMobile ? 'hidden' : 'block'} md:block`}>
           <div>
             <h3 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
               <Sparkles className="h-6 w-6 text-orange-500" />
@@ -207,7 +230,7 @@ export const OfferLetterModal = ({
         </div>
 
         {/* Right Side: Live Document Preview */}
-        <div className="hidden md:flex flex-1 bg-slate-50 p-12 items-center justify-center overflow-y-auto">
+        <div className={`${showPreviewMobile ? 'block' : 'hidden'} md:flex flex-1 bg-slate-50 p-8 md:p-12 items-center justify-center overflow-y-auto`}>
           <div className="bg-white w-full max-w-[450px] aspect-[1/1.41] shadow-[0_20px_50px_rgba(0,0,0,0.1)] p-12 border border-slate-200 relative flex flex-col">
             
             <div className="flex justify-between items-start mb-10">

@@ -1,6 +1,27 @@
 from sqlalchemy.orm import Session
 from app.db import models
 from app.schemas.candidate import CandidateCreate, CandidateUpdate, CandidateCreateWithAnswersAndPayment
+import base64
+import requests
+from email.mime.text import MIMEText
+
+
+def send_gmail_message(access_token: str, recipient: str, subject: str, content: str):
+    message = MIMEText(content)
+    message["to"] = recipient
+    message["subject"] = subject
+    raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode("utf-8")
+
+    url = "https://gmail.googleapis.com/gmail/v1/users/me/messages/send"
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json"
+    }  
+    body = {"raw": raw_message}
+    response = requests.post(url, headers=headers, json=body)
+    return response
+
+
 
 
 def create_candidate(db: Session, candidate_data: CandidateCreateWithAnswersAndPayment):

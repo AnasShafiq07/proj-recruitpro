@@ -78,8 +78,8 @@ class Interview(Base):
         foreign_keys=[slot_id],
         uselist=False,  # one-to-one
     )
-
-    candidate: Mapped["Candidate"] = relationship()
+    candidate: Mapped["Candidate"] = relationship(back_populates="interviews")
+    job: Mapped["Job"] = relationship(back_populates="interviews")
 
 
 class InterviewSlot(Base):
@@ -177,6 +177,7 @@ class Job(Base):
     department: Mapped["Department"] = relationship(back_populates="jobs") 
     question_form: Mapped["QuestionsForm"] = relationship(back_populates="job")
     candidates: Mapped[List["Candidate"]] = relationship(back_populates="job", cascade="all, delete-orphan")
+    interviews: Mapped[List["Interview"]] = relationship(back_populates="job")
 
 
 class Department(Base):
@@ -235,12 +236,14 @@ class Candidate(Base):
     ai_score: Mapped[int] = mapped_column(Integer, default=0, nullable=True)
     meet_link: Mapped[str] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc), nullable=True)
+    invited_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     
     notifications: Mapped[list["Notification"]] = relationship(back_populates="candidate")
     answers: Mapped[list["Answer"]] = relationship(back_populates="candidate", cascade="all, delete-orphan")
     resume_parsing: Mapped["ResumeParsing"] = relationship(back_populates="candidate", uselist=False)
     company: Mapped["Company"] = relationship(back_populates="candidates")
     job: Mapped["Job"] = relationship(back_populates="candidates")
+    interviews: Mapped[List["Interview"]] = relationship(back_populates="candidate")
 
 class Answer(Base):
     __tablename__ = "answer"
@@ -339,3 +342,5 @@ class BlacklistedToken(Base):
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     token: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
     blacklisted_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc))
+
+
