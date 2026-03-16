@@ -41,7 +41,9 @@ from typing import List
 
 from email.mime.text import MIMEText
 import requests
-
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from fastapi import BackgroundTasks
 
 WEEKDAY_MAP = {
     "Monday": 0, "Tuesday": 1, "Wednesday": 2, "Thursday": 3,
@@ -605,18 +607,23 @@ def get_open_slots(job_id: int, candidate_id: int, db: Session = Depends(get_db)
     
     return slots
 
-# --- 2. BOOK A SLOT ---
+# --- 2. BOOK A SLOT --
+
 @router.post("/candidates/book/{slot_id}")
-def book_slot(slot_id: int, req: BookSlotRequest, db: Session = Depends(get_db)):
-    # 1. Fetch Candidate and check Expiry again for security
+def book_slot(
+    slot_id: int, 
+    req: BookSlotRequest, 
+    background_tasks: BackgroundTasks, 
+    db: Session = Depends(get_db)
+):
+    # 1. Fetch Candidate and check Expiry (48-hour window)
     candidate = db.query(Candidate).filter(Candidate.candidate_id == req.candidate_id).first()
     if not candidate or not candidate.invited_at:
-         raise HTTPException(status_code=404, detail="Candidate not found")
+        raise HTTPException(status_code=404, detail="Candidate not found")
     
     invited_time = candidate.invited_at.replace(tzinfo=timezone.utc)
     if datetime.now(timezone.utc) > invited_time + timedelta(hours=48):
         raise HTTPException(status_code=403, detail="Link expired.")
-
     # 2. Prevent Double Booking for the same job
     existing_booking = db.query(Interview).filter(
         Interview.candidate_id == req.candidate_id,
@@ -626,7 +633,7 @@ def book_slot(slot_id: int, req: BookSlotRequest, db: Session = Depends(get_db))
     if existing_booking:
         raise HTTPException(status_code=400, detail="You already have an interview scheduled.")
 
-    # 3. Lock the specific slot to prevent race conditions
+    # 3. Lock the specific slot to prevent race conditions (Concurrent bookings)
     slot = db.query(InterviewSlot).filter(InterviewSlot.id == slot_id).with_for_update().first()
     if not slot or slot.is_booked:
         raise HTTPException(status_code=400, detail="This slot is no longer available.")
@@ -637,12 +644,23 @@ def book_slot(slot_id: int, req: BookSlotRequest, db: Session = Depends(get_db))
         google_event = create_google_calendar_event(db, slot, req.email, hr_id)
         meet_link = google_event.get("hangoutLink")
 
-        # 5. Atomic Update
+        # 5. Prepare Time Data for DB and Email
+        # Combine the slot date and the start_time string
+        booking_datetime = datetime.combine(
+            slot.date.date(), 
+            datetime.strptime(slot.start_time, "%H:%M").time()
+        )
+        
+        # Format a friendly string for the email (e.g., Monday, Mar 16 at 02:20 PM)
+        friendly_time = booking_datetime.strftime("%A, %b %d at %I:%M %p")
+
+        # 6. Atomic Database Updates
         slot.is_booked = True
+        
         new_interview = Interview(
             candidate_id=candidate.candidate_id,
             job_id=candidate.job_id,
-            scheduled_time=datetime.combine(slot.date.date(), datetime.strptime(slot.start_time, "%H:%M").time()),
+            scheduled_time=booking_datetime,
             meet_link=meet_link,
             slot_id=slot.id,
             status="Scheduled"
@@ -654,11 +672,33 @@ def book_slot(slot_id: int, req: BookSlotRequest, db: Session = Depends(get_db))
         db.add(new_interview)
         db.commit()
 
-        return {"message": "Booked successfully", "meet_link": meet_link}
+        # 7. Trigger Background Confirmation Email
+        hr_id = slot.availability.hr_id
+
+        token_record = get_valid_token(db, hr_id) # Using your existing helper function
+        if not token_record:
+            raise HTTPException(status_code=401, detail="HR Google account not linked; cannot send confirmation.")
+        
+        background_tasks.add_task(
+            send_confirmation_email, 
+            email=candidate.email, 
+            name=candidate.name, 
+            time=friendly_time, 
+            link=meet_link,
+            access_token=token_record.access_token
+        )
+
+        return {
+            "status": "success",
+            "message": "Interview booked successfully", 
+            "meet_link": meet_link,
+            "scheduled_at": friendly_time
+        }
         
     except Exception as e:
         db.rollback() 
-        raise HTTPException(status_code=500, detail=f"Google Integration Failed: {str(e)}")
+        print(f"Booking Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Booking failed: {str(e)}")
 
 # --- 3. SEND BULK INVITES ---
 @router.post("/send-bulk-invites")
@@ -757,3 +797,66 @@ def process_email_invites(candidates: List[Candidate], job_id: int, subject: str
             headers=headers,
             json={"raw": raw_message}
         )
+
+
+def send_confirmation_email(email: str, name: str, time: str, link: str, access_token: str):
+    """
+    Sends a professional confirmation email using the Gmail API.
+    """
+    headers = {
+        "Authorization": f"Bearer {access_token}", 
+        "Content-Type": "application/json"
+    }
+
+    email_content = f"""
+    <html>
+      <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6;">
+        <div style="max-width: 600px; margin: auto; border: 1px solid #e2e8f0; padding: 30px; border-radius: 12px;">
+          <h2 style="color: #1D4ED8; margin-top: 0;">Interview Confirmed!</h2>
+          <p>Hi <strong>{name}</strong>,</p>
+          <p>Your interview has been successfully scheduled. We look forward to speaking with you.</p>
+          
+          <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 0 0 10px 0;"><strong>Date & Time:</strong> {time} (PKT)</p>
+            <p style="margin: 0;"><strong>Meeting Link:</strong> <a href="{link}" style="color: #2563EB; font-weight: 600;">Join Google Meet</a></p>
+          </div>
+          
+          <p style="font-size: 14px; color: #64748b;">
+            <b>Tip:</b> Please ensure your camera and microphone are working correctly before the session starts.
+          </p>
+          
+          <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 25px 0;" />
+          <p style="font-size: 12px; color: #94a3b8; text-align: center;">
+            Sent via <strong>RecruitPro AI</strong>
+          </p>
+        </div>
+      </body>
+    </html>
+    """
+
+    # Create the MIME message
+    message = MIMEText(email_content, "html")
+    message["to"] = email
+    message["from"] = "RecruitPro AI" # Note: Gmail API usually overrides this with the authenticated user's email
+    message["subject"] = "Interview Confirmed"
+
+    # Encode to base64url format required by Gmail API
+    raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode("utf-8")
+
+    try:
+        response = requests.post(
+            "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
+            headers=headers,
+            json={"raw": raw_message}
+        )
+        
+        if response.status_code not in [200, 201]:
+            print(f"Gmail API Error: {response.json()}")
+            return False
+            
+        print(f"Confirmation email successfully sent to {email}")
+        return True
+
+    except Exception as e:
+        print(f"Failed to send confirmation email: {e}")
+        return False
