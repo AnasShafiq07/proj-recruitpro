@@ -74,14 +74,14 @@ def create_candidate_endpoint(
     
     if token:
         email_content = f"Hi {db_candidate.name},\n\nThank you for applying! Your application for {job.title} has been submitted."
-        
-    background_tasks.add_task(
+        background_tasks.add_task(
             send_gmail_message,
             access_token=token.access_token,
             recipient=db_candidate.email,
             subject="Application Submitted",
             content=email_content
         )
+    
     return {
         "candidate": {
             "candidate_id": db_candidate.candidate_id,
