@@ -214,6 +214,7 @@ const Candidates = () => {
         setCandidates(cData);
         setAvailability(availData);
         setJobLink(`${window.location.origin}/apply/${jobData?.slug}`);
+      //setLinkToShare(`${window.location.origin}/apply/` + resData.job_link);
       } catch (err) {
         console.error("Fetch failed:", err);
       }

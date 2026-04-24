@@ -13,17 +13,20 @@ app = FastAPI(title="RecruitPro API")
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 
+
+
 origins = [
     "http://localhost:8081",
     "http://localhost:8082",
+    "https://proj-recruitpro-r567.vercel.app", 
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins = origins,
-    allow_credentials = True,
-    allow_methods = ["*"],
-    allow_headers = ["*"],
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.include_router(auth_router)
