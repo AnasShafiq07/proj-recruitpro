@@ -177,13 +177,13 @@ def auth_callback(request: Request, code: str = None, error: str = None, state: 
     )
     #print(f"expires_at: {token.expires_at}")
     return RedirectResponse(url="https://proj-recruitpro-r567.vercel.app/settings", status_code=302)
-
+    
 @router.get("/auth/status")
 def auth_status(db: Session = Depends(get_db), hr: HRManager = Depends(get_current_hr)):
     token = get_valid_token(db, hr.id)
     if not token or token.expires_at <= datetime.now(timezone.utc):
         return {"authenticated": False}
-        
+    
     return {
         "authenticated": True,
         "expires_at": token.expires_at,

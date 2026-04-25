@@ -3,8 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { CheckCircle2, XCircle, Briefcase } from "lucide-react";
+import { API_CONFIG } from "@/config";
 
-const API_BASE_URL = "http://127.0.0.1:8000";
+const API_BASE_URL = API_CONFIG.BASE_URL;
+
 
 interface LinkedInAuthStatus {
   authenticated: boolean;
